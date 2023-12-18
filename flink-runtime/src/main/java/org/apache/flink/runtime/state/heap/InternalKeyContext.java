@@ -23,6 +23,8 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 
 import javax.annotation.Nonnull;
 
+import java.util.Collection;
+
 /**
  * This interface is the current context of a keyed state. It provides information about the
  * currently selected key in the context, the corresponding key-group, and other key and
@@ -59,4 +61,10 @@ public interface InternalKeyContext<K> {
      * @param currentKeyGroupIndex the current key group index to set to.
      */
     void setCurrentKeyGroupIndex(int currentKeyGroupIndex);
+
+    /** Used by states to access the current key. */
+    Collection<K> getCurrentKeys();
+
+    /** Used by states to access the current key. */
+    void setCurrentKeys(Collection<K> keys);
 }

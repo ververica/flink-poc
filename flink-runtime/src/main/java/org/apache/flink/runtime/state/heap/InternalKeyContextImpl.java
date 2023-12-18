@@ -24,6 +24,8 @@ import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
+import java.util.Collection;
+
 /**
  * The default {@link InternalKeyContext} implementation.
  *
@@ -39,6 +41,8 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     private K currentKey;
     /** The key group of the currently active key. */
     private int currentKeyGroupIndex;
+
+    private Collection<K> currentKeys;
 
     public InternalKeyContextImpl(
             @Nonnull KeyGroupRange keyGroupRange, @Nonnegative int numberOfKeyGroups) {
@@ -78,5 +82,15 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
                     currentKeyGroupIndex, keyGroupRange);
         }
         this.currentKeyGroupIndex = currentKeyGroupIndex;
+    }
+
+    @Override
+    public Collection<K> getCurrentKeys() {
+        return currentKeys;
+    }
+
+    @Override
+    public void setCurrentKeys(Collection<K> keys) {
+        currentKeys = keys;
     }
 }

@@ -396,7 +396,7 @@ public class StreamOperatorStateHandler {
         }
     }
 
-    public void setCurrentKeys(Collection<Object> key) {
+    public void setCurrentKeys(Collection<?> key) {
         if (keyedStateBackend != null) {
             try {
                 // need to work around type restrictions
@@ -412,9 +412,9 @@ public class StreamOperatorStateHandler {
     }
 
     @SuppressWarnings("unchecked")
-    public Collection<Object> getCurrentKeys() {
+    public Collection<?> getCurrentKeys() {
         if (keyedStateBackend != null) {
-            return (Collection<Object>) keyedStateBackend.getCurrentKeys();
+            return keyedStateBackend.getCurrentKeys();
         } else {
             throw new UnsupportedOperationException("Key can only be retrieved on KeyedStream.");
         }

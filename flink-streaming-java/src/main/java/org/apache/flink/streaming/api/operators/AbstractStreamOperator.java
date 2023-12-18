@@ -62,7 +62,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -515,12 +514,12 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public void setCurrentKeys(Collection<Object> key) {
-        stateHandler.setCurrentKeys(key);
+    public void setCurrentKeys(Collection<?> keys) {
+        stateHandler.setCurrentKeys(keys);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public Collection<Object> getCurrentKeys() {
+    public Collection<?> getCurrentKeys() {
         return stateHandler.getCurrentKeys();
     }
 

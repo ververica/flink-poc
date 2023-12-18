@@ -70,7 +70,10 @@ public class ReduceTransformationTranslator<IN, KEY>
                                 .getInputType()
                                 .createSerializer(context.getStreamGraph().getExecutionConfig()));
 
-        SimpleOperatorFactory<IN> operatorFactory = SimpleOperatorFactory.of(groupedReduce);
+        SimpleOperatorFactory<IN> operatorFactory =
+                transformation.getKeySelector() == null
+                        ? SimpleOperatorFactory.of(groupedReduce)
+                        : SimpleOperatorFactory.ofKeyed(groupedReduce);
         operatorFactory.setChainingStrategy(transformation.getChainingStrategy());
         return translateInternal(
                 transformation,

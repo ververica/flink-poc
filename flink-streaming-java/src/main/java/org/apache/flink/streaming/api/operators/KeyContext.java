@@ -32,7 +32,11 @@ public interface KeyContext {
 
     Object getCurrentKey();
 
-    void setCurrentKeys(Collection<Object> key);
+    default void setCurrentKeys(Collection<?> keys) {
+        throw new UnsupportedOperationException("not implemented");
+    }
 
-    Collection<Object> getCurrentKeys();
+    default Collection<?> getCurrentKeys() {
+        throw new UnsupportedOperationException("not implemented");
+    }
 }

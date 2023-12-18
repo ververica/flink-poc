@@ -61,6 +61,30 @@ public class SimpleOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
         }
     }
 
+    public static <OUT> SimpleOperatorFactory<OUT> ofKeyed(StreamOperator<OUT> operator) {
+        if (operator == null) {
+            return null;
+        } else if (operator instanceof StreamSource
+                && ((StreamSource) operator).getUserFunction()
+                        instanceof InputFormatSourceFunction) {
+            return new SimpleInputFormatOperatorFactory<OUT>((StreamSource) operator);
+        } else if (operator instanceof UserFunctionProvider
+                && (((UserFunctionProvider<Function>) operator).getUserFunction()
+                        instanceof OutputFormatSinkFunction)) {
+            return new SimpleOutputFormatOperatorFactory<>(
+                    (((OutputFormatSinkFunction<?>)
+                                    ((UserFunctionProvider<Function>) operator).getUserFunction())
+                            .getFormat()),
+                    operator);
+        } else if (operator instanceof OneInputStreamOperator) {
+            return BundleSimpleOperatorFactory.of((OneInputStreamOperator) operator);
+        } else if (operator instanceof AbstractUdfStreamOperator) {
+            return new SimpleUdfStreamOperatorFactory<OUT>((AbstractUdfStreamOperator) operator);
+        } else {
+            return new SimpleOperatorFactory<>(operator);
+        }
+    }
+
     protected SimpleOperatorFactory(StreamOperator<OUT> operator) {
         this.operator = checkNotNull(operator);
         if (operator instanceof SetupableStreamOperator) {
