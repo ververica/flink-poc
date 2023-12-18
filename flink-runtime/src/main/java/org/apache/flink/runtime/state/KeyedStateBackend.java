@@ -25,6 +25,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.util.Disposable;
 
+import java.util.Collection;
 import java.util.stream.Stream;
 
 /**
@@ -44,6 +45,10 @@ public interface KeyedStateBackend<K>
 
     /** @return Current key. */
     K getCurrentKey();
+
+    void setCurrentKeys(Collection<K> key);
+
+    Collection<K> getCurrentKeys();
 
     /** @return Serializer of the key. */
     TypeSerializer<K> getKeySerializer();

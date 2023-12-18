@@ -60,6 +60,7 @@ import org.apache.flink.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collection;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -98,7 +99,7 @@ public abstract class AbstractStreamOperatorV2<OUT>
     protected final LatencyStats latencyStats;
     protected final ProcessingTimeService processingTimeService;
 
-    private StreamOperatorStateHandler stateHandler;
+    protected StreamOperatorStateHandler stateHandler;
     private InternalTimeServiceManager<?> timeServiceManager;
 
     public AbstractStreamOperatorV2(StreamOperatorParameters<OUT> parameters, int numberOfInputs) {
@@ -415,6 +416,16 @@ public abstract class AbstractStreamOperatorV2<OUT>
     @SuppressWarnings({"unchecked", "rawtypes"})
     public Object getCurrentKey() {
         return stateHandler.getCurrentKey();
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void setCurrentKeys(Collection<Object> key) {
+        stateHandler.setCurrentKeys(key);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Collection<Object> getCurrentKeys() {
+        return stateHandler.getCurrentKeys();
     }
 
     public Optional<KeyedStateStore> getKeyedStateStore() {

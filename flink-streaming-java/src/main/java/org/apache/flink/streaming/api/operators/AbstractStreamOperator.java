@@ -61,6 +61,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -510,6 +512,16 @@ public abstract class AbstractStreamOperator<OUT>
 
     public Object getCurrentKey() {
         return stateHandler.getCurrentKey();
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public void setCurrentKeys(Collection<Object> key) {
+        stateHandler.setCurrentKeys(key);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Collection<Object> getCurrentKeys() {
+        return stateHandler.getCurrentKeys();
     }
 
     public KeyedStateStore getKeyedStateStore() {
