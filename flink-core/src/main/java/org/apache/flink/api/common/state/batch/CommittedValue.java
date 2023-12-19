@@ -18,17 +18,25 @@
 
 package org.apache.flink.api.common.state.batch;
 
-import org.apache.flink.api.common.state.State;
-
-import java.io.IOException;
-
 /**
- * BatchValueState.
- * @param <T>
+ * CommittedValue.
  */
-public interface BatchValueState<T> extends State {
+public class CommittedValue<T> {
 
-    Iterable<T> values() throws IOException;
+    private final T value;
 
-    void update(Iterable<CommittedValue<T>> values) throws IOException;
+    private final CommittedValueType valueType;
+
+    private CommittedValue(T value, CommittedValueType valueType) {
+        this.value = value;
+        this.valueType = valueType;
+    }
+
+    public static <T> CommittedValue<T> of(T value, CommittedValueType valueType) {
+        return new CommittedValue<>(value, valueType);
+    }
+
+    public enum CommittedValueType {
+        UPDATE, DELETE, UNMODIFIED
+    }
 }

@@ -1,5 +1,6 @@
 package org.apache.flink.state.remote.rocksdb;
 
+import org.apache.flink.api.common.state.batch.CommittedValue;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 
@@ -18,7 +19,7 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
     }
 
     @Override
-    public void update(Iterable<V> values) throws IOException {
+    public void update(Iterable<CommittedValue<V>> values) throws IOException {
         throw new UnsupportedOperationException();
     }
 
