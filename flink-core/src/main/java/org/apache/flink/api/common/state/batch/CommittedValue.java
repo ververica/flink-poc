@@ -32,6 +32,14 @@ public class CommittedValue<T> {
         this.valueType = valueType;
     }
 
+    public CommittedValueType getValueType() {
+        return valueType;
+    }
+    
+    public T getValue() {
+        return value;
+    }
+
     public static <T> CommittedValue<T> of(T value, CommittedValueType valueType) {
         return new CommittedValue<>(value, valueType);
     }
