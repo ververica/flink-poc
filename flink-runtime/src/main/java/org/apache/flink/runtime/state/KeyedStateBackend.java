@@ -46,9 +46,13 @@ public interface KeyedStateBackend<K>
     /** @return Current key. */
     K getCurrentKey();
 
-    void setCurrentKeys(Collection<K> key);
+    default void setCurrentKeys(Collection<K> key) {
+        throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
+    }
 
-    Collection<K> getCurrentKeys();
+    default Collection<K> getCurrentKeys() {
+        throw new UnsupportedOperationException("Don't support getCurrentKeys yet");
+    }
 
     /** @return Serializer of the key. */
     TypeSerializer<K> getKeySerializer();
