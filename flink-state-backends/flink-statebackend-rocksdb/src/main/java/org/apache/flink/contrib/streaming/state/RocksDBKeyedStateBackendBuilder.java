@@ -98,27 +98,27 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
     private final LocalRecoveryConfig localRecoveryConfig;
 
     /** Factory function to create column family options from state name. */
-    private final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
+    protected final Function<String, ColumnFamilyOptions> columnFamilyOptionsFactory;
 
     /** The container of RocksDB option factory and predefined options. */
-    private final RocksDBResourceContainer optionsContainer;
+    protected final RocksDBResourceContainer optionsContainer;
 
     /** Path where this configured instance stores its data directory. */
-    private final File instanceBasePath;
+    protected final File instanceBasePath;
 
     /** Path where this configured instance stores its RocksDB database. */
-    private final File instanceRocksDBPath;
+    protected final File instanceRocksDBPath;
 
-    private final MetricGroup metricGroup;
+    protected final MetricGroup metricGroup;
 
     /** True if incremental checkpointing is enabled. */
     private boolean enableIncrementalCheckpointing;
 
     /** RocksDB property-based and statistics-based native metrics options. */
-    private RocksDBNativeMetricOptions nativeMetricOptions;
+    protected RocksDBNativeMetricOptions nativeMetricOptions;
 
     private int numberOfTransferingThreads;
-    private long writeBatchSize =
+    protected long writeBatchSize =
             RocksDBConfigurableOptions.WRITE_BATCH_SIZE.defaultValue().getBytes();
 
     private RocksDB injectedTestDB; // for testing
@@ -219,19 +219,19 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         this.injectedDefaultColumnFamilyHandle = injectedDefaultColumnFamilyHandle;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setEnableIncrementalCheckpointing(
+    public RocksDBKeyedStateBackendBuilder<K> setEnableIncrementalCheckpointing(
             boolean enableIncrementalCheckpointing) {
         this.enableIncrementalCheckpointing = enableIncrementalCheckpointing;
         return this;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setNativeMetricOptions(
+    public RocksDBKeyedStateBackendBuilder<K> setNativeMetricOptions(
             RocksDBNativeMetricOptions nativeMetricOptions) {
         this.nativeMetricOptions = nativeMetricOptions;
         return this;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setNumberOfTransferingThreads(
+    public RocksDBKeyedStateBackendBuilder<K> setNumberOfTransferingThreads(
             int numberOfTransferingThreads) {
         Preconditions.checkState(
                 injectRocksDBStateUploader == null,
@@ -240,13 +240,13 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         return this;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setWriteBatchSize(long writeBatchSize) {
+    public RocksDBKeyedStateBackendBuilder<K> setWriteBatchSize(long writeBatchSize) {
         checkArgument(writeBatchSize >= 0, "Write batch size should be non negative.");
         this.writeBatchSize = writeBatchSize;
         return this;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setRocksDBStateUploader(
+    public RocksDBKeyedStateBackendBuilder<K> setRocksDBStateUploader(
             RocksDBStateUploader rocksDBStateUploader) {
         Preconditions.checkState(
                 injectRocksDBStateUploader == null, "rocksDBStateUploader can be only set once");
@@ -258,7 +258,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         return this;
     }
 
-    RocksDBKeyedStateBackendBuilder<K> setOverlapFractionThreshold(
+    public RocksDBKeyedStateBackendBuilder<K> setOverlapFractionThreshold(
             double overlapFractionThreshold) {
         this.overlapFractionThreshold = overlapFractionThreshold;
         return this;
@@ -439,7 +439,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
                 writeBatchSize);
     }
 
-    private RocksDBRestoreOperation getRocksDBRestoreOperation(
+    protected RocksDBRestoreOperation getRocksDBRestoreOperation(
             int keyGroupPrefixBytes,
             CloseableRegistry cancelStreamRegistry,
             LinkedHashMap<String, RocksDBKeyedStateBackend.RocksDbKvStateInfo> kvStateInformation,
@@ -516,7 +516,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         }
     }
 
-    private RocksDBSnapshotStrategyBase<K, ?> initializeSavepointAndCheckpointStrategies(
+    protected RocksDBSnapshotStrategyBase<K, ?> initializeSavepointAndCheckpointStrategies(
             CloseableRegistry cancelStreamRegistry,
             ResourceGuard rocksDBResourceGuard,
             LinkedHashMap<String, RocksDBKeyedStateBackend.RocksDbKvStateInfo> kvStateInformation,
@@ -564,7 +564,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         return checkpointSnapshotStrategy;
     }
 
-    private PriorityQueueSetFactory initPriorityQueueFactory(
+    protected PriorityQueueSetFactory initPriorityQueueFactory(
             int keyGroupPrefixBytes,
             Map<String, RocksDBKeyedStateBackend.RocksDbKvStateInfo> kvStateInformation,
             RocksDB db,
@@ -602,7 +602,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         return new HeapPriorityQueueSetFactory(keyGroupRange, numberOfKeyGroups, 128);
     }
 
-    private void prepareDirectories() throws IOException {
+    protected void prepareDirectories() throws IOException {
         checkAndCreateDirectory(instanceBasePath);
         if (instanceRocksDBPath.exists()) {
             // Clear the base directory when the backend is created

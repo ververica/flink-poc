@@ -143,15 +143,15 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     private int numberOfTransferThreads;
 
     /** The configuration for memory settings (pool sizes, etc.). */
-    private final RocksDBMemoryConfiguration memoryConfiguration;
+    protected final RocksDBMemoryConfiguration memoryConfiguration;
 
     /**
      * The configuration for rocksdb priorityQueue state settings (priorityQueue state type, etc.).
      */
-    private final RocksDBPriorityQueueConfig priorityQueueConfig;
+    protected final RocksDBPriorityQueueConfig priorityQueueConfig;
 
     /** The default rocksdb property-based metrics options. */
-    private final RocksDBNativeMetricOptions nativeMetricOptions;
+    protected final RocksDBNativeMetricOptions nativeMetricOptions;
 
     // -- runtime values, set on TaskManager when initializing / using the backend
 
@@ -159,7 +159,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     private transient File[] initializedDbBasePaths;
 
     /** JobID for uniquifying backup paths. */
-    private transient JobID jobId;
+    protected transient JobID jobId;
 
     /** The index of the next directory to be used from {@link #initializedDbBasePaths}. */
     private transient int nextDirectory;
@@ -180,7 +180,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     private double overlapFractionThreshold;
 
     /** Factory for Write Buffer Manager and Block Cache. */
-    private RocksDBMemoryFactory rocksDBMemoryFactory;
+    protected RocksDBMemoryFactory rocksDBMemoryFactory;
     // ------------------------------------------------------------------------
 
     /** Creates a new {@code EmbeddedRocksDBStateBackend} for storing local state. */
@@ -220,7 +220,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
      * @param config The configuration.
      * @param classLoader The class loader.
      */
-    private EmbeddedRocksDBStateBackend(
+    protected EmbeddedRocksDBStateBackend(
             EmbeddedRocksDBStateBackend original, ReadableConfig config, ClassLoader classLoader) {
         // configure incremental checkpoints
         this.enableIncrementalCheckpointing =
@@ -341,7 +341,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
         return true;
     }
 
-    private void lazyInitializeForJob(
+    protected void lazyInitializeForJob(
             Environment env, @SuppressWarnings("unused") String operatorIdentifier)
             throws IOException {
 
@@ -386,7 +386,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
         isInitialized = true;
     }
 
-    private File getNextStoragePath() {
+    protected File getNextStoragePath() {
         int ni = nextDirectory + 1;
         ni = ni >= initializedDbBasePaths.length ? 0 : ni;
         nextDirectory = ni;
@@ -847,7 +847,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
         this.rocksDBMemoryFactory = checkNotNull(rocksDBMemoryFactory);
     }
 
-    double getOverlapFractionThreshold() {
+    public double getOverlapFractionThreshold() {
         return overlapFractionThreshold == UNDEFINED_OVERLAP_FRACTION_THRESHOLD
                 ? RESTORE_OVERLAP_FRACTION_THRESHOLD.defaultValue()
                 : overlapFractionThreshold;
@@ -881,7 +881,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     }
 
     @VisibleForTesting
-    private RocksDBResourceContainer createOptionsAndResourceContainer(
+    protected RocksDBResourceContainer createOptionsAndResourceContainer(
             @Nullable OpaqueMemoryResource<RocksDBSharedResources> sharedResources,
             @Nullable File instanceBasePath,
             boolean enableStatistics) {
@@ -914,7 +914,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     // ------------------------------------------------------------------------
 
     @VisibleForTesting
-    static void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {
+    protected static void ensureRocksDBIsLoaded(String tempDirectory) throws IOException {
         ensureRocksDBIsLoaded(tempDirectory, NativeLibraryLoader::getInstance);
     }
 

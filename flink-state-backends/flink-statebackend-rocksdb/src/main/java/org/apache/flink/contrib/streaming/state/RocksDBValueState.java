@@ -38,7 +38,7 @@ import java.io.IOException;
  * @param <N> The type of the namespace.
  * @param <V> The type of value that the state state stores.
  */
-class RocksDBValueState<K, N, V> extends AbstractRocksDBState<K, N, V>
+public class RocksDBValueState<K, N, V> extends AbstractRocksDBState<K, N, V>
         implements InternalValueState<K, N, V> {
 
     /**
@@ -110,7 +110,7 @@ class RocksDBValueState<K, N, V> extends AbstractRocksDBState<K, N, V>
     }
 
     @SuppressWarnings("unchecked")
-    static <K, N, SV, S extends State, IS extends S> IS create(
+    public static <K, N, SV, S extends State, IS extends S> IS create(
             StateDescriptor<S, SV> stateDesc,
             Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
                     registerResult,

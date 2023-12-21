@@ -158,7 +158,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                                     (StateUpdateFactory) RocksDBReducingState::update))
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
 
-    private interface StateCreateFactory {
+    protected interface StateCreateFactory {
         <K, N, SV, S extends State, IS extends S> IS createState(
                 StateDescriptor<S, SV> stateDesc,
                 Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
@@ -204,7 +204,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
     private final long writeBatchSize;
 
     /** Map of created k/v states. */
-    private final Map<String, State> createdKVStates;
+    protected final Map<String, State> createdKVStates;
 
     /**
      * Information about the k/v states, maintained in the order as we create them. This is used to
@@ -257,7 +257,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
     // mark whether this backend is already disposed and prevent duplicate disposing
     private boolean disposed = false;
 
-    private final RocksDbTtlCompactFiltersManager ttlCompactFiltersManager;
+    protected final RocksDbTtlCompactFiltersManager ttlCompactFiltersManager;
 
     public RocksDBKeyedStateBackend(
             ClassLoader userCodeClassLoader,
@@ -643,7 +643,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
      * requested we check here whether we already have a registered entry for that and return it
      * (after some necessary state compatibility checks) or create a new one if it does not exist.
      */
-    private <N, S extends State, SV, SEV>
+    protected  <N, S extends State, SV, SEV>
             Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
                     tryRegisterKvStateInformation(
                             StateDescriptor<S, SV> stateDesc,
@@ -921,7 +921,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         return createdState;
     }
 
-    private <S extends State, SV> String stateNotSupportedMessage(
+    protected  <S extends State, SV> String stateNotSupportedMessage(
             StateDescriptor<S, SV> stateDesc) {
         return String.format(
                 "State %s is not supported by %s", stateDesc.getClass(), this.getClass());

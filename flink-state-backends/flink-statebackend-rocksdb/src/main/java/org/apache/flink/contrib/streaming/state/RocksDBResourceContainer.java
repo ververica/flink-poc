@@ -243,7 +243,7 @@ public final class RocksDBResourceContainer implements AutoCloseable {
         return opt;
     }
 
-    RocksDBNativeMetricOptions getMemoryWatcherOptions(
+    public RocksDBNativeMetricOptions getMemoryWatcherOptions(
             RocksDBNativeMetricOptions defaultMetricOptions) {
         return optionsFactory == null
                 ? defaultMetricOptions

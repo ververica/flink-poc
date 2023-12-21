@@ -49,10 +49,10 @@ import java.io.IOException;
 public abstract class AbstractRocksDBState<K, N, V> implements InternalKvState<K, N, V>, State {
 
     /** Serializer for the namespace. */
-    TypeSerializer<N> namespaceSerializer;
+    protected TypeSerializer<N> namespaceSerializer;
 
     /** Serializer for the state values. */
-    TypeSerializer<V> valueSerializer;
+    protected TypeSerializer<V> valueSerializer;
 
     /** The current namespace, which the next value methods will refer to. */
     private N currentNamespace;

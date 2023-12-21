@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * The set of resources that can be shared by all RocksDB instances in a slot. Sharing these
  * resources helps RocksDB a predictable resource footprint.
  */
-final class RocksDBSharedResources implements AutoCloseable {
+public final class RocksDBSharedResources implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(RocksDBSharedResources.class);
 
     private final Cache cache;
