@@ -55,6 +55,8 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
     /** The column family of this particular instance of state. */
     protected final ColumnFamilyHandle columnFamily;
 
+    private N currentNamespace;
+
     protected V defaultValue;
 
     protected final WriteOptions writeOptions;
@@ -63,7 +65,7 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
 
     protected final RocksDB db;
 
-    protected BatchParallelIOExecutor<K> parallelIOExecutor;
+    protected final BatchParallelIOExecutor<K> parallelIOExecutor;
 
     private final ThreadLocal<SerializedCompositeKeyBuilder<K>> sharedKeyNamespaceSerializer;
 
@@ -98,6 +100,7 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
                         CompositeKeySerializationUtils.computeRequiredBytesInKeyGroupPrefix(
                                maxParallelism),
                         32));
+        this.parallelIOExecutor = backend.getBatchParallelIOExecutor();
     }
 
 
@@ -144,7 +147,7 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
 
     @Override
     public void setCurrentNamespace(N namespace) {
-        throw new UnsupportedOperationException();
+        this.currentNamespace = namespace;
     }
 
     @Override

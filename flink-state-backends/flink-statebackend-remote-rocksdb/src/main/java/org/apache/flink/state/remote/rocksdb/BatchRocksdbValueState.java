@@ -52,7 +52,7 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
 
     @Override
     public Iterable<V> values() throws IOException {
-        return parallelIOExecutor.fetchValues(key -> {
+        return parallelIOExecutor.fetchValues(backend.getCurrentKeys(), key -> {
             byte[] valueBytes = db.get(columnFamily, serializeCurrentKeyWithGroupAndNamespace(key));
             if (valueBytes == null) {
                 return getDefaultValue();
@@ -135,7 +135,7 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
 
     @Override
     public TypeSerializer getKeySerializer() {
-        throw new UnsupportedOperationException();
+        return keySerializer;
     }
 
     @SuppressWarnings("unchecked")

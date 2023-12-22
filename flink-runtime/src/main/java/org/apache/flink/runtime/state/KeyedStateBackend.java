@@ -156,6 +156,10 @@ public interface KeyedStateBackend<K>
      */
     boolean deregisterKeySelectionListener(KeySelectionListener<K> listener);
 
+    default void registerCurrentKeysChangedListener(CurrentKeysChangedListener listener) {
+        throw new UnsupportedOperationException();
+    }
+
     @Deprecated
     default boolean isStateImmutableInStateBackend(CheckpointType checkpointOptions) {
         return false;
@@ -180,5 +184,11 @@ public interface KeyedStateBackend<K>
     interface KeySelectionListener<K> {
         /** Callback when key context is switched. */
         void keySelected(K newKey);
+    }
+
+    @FunctionalInterface
+    interface CurrentKeysChangedListener {
+        /** Callback when key context is switched. */
+        void currentKeysChanged();
     }
 }

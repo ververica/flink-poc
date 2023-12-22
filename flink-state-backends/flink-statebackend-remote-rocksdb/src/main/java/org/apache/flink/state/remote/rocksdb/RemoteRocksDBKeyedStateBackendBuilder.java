@@ -97,10 +97,13 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private final boolean enableCacheLayer;
 
+    private final int ioParallelism;
+
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
             boolean enableCacheLayer,
+            int ioParallelism,
             String operatorIdentifier,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
@@ -141,6 +144,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
         this.enableCacheLayer = enableCacheLayer;
+        this.ioParallelism = ioParallelism;
     }
 
     @Override
@@ -270,6 +274,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 this.remoteRocksDBMode,
                 this.workingDir,
                 this.enableCacheLayer,
+                this.ioParallelism,
                 this.userCodeClassLoader,
                 this.instanceBasePath,
                 this.optionsContainer,

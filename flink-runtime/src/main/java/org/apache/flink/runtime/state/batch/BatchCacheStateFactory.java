@@ -21,6 +21,7 @@ package org.apache.flink.runtime.state.batch;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
@@ -62,11 +63,15 @@ public class BatchCacheStateFactory<
             InternalKvState<K, N, ?> kvState,
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
-            InternalKeyContext<K> keyContext)
+            InternalKeyContext<K> keyContext,
+            KeyedStateBackend keyedStateBackend)
             throws Exception {
         if (batchCacheStateConfig.isEnableCacheBatchData()) {
-            return new BatchCacheStateFactory<>(kvState, stateDescriptor, batchCacheStateConfig, keyContext)
-                    .createState();
+            AbstractBatchCacheState<K, N, V, ?>  batchState =
+                    (AbstractBatchCacheState<K, N, V, ?>) (new BatchCacheStateFactory<>(kvState, stateDescriptor, batchCacheStateConfig, keyContext)
+                    .createState());
+            keyedStateBackend.registerCurrentKeysChangedListener(batchState);
+            return batchState;
         }
         return kvState;
     }

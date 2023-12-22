@@ -61,6 +61,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
 
     private boolean enableCacheLayer;
 
+    private int ioParallelism;
+
     private String workingDir;
 
     public RemoteRocksDBStateBackend() {
@@ -73,6 +75,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
         this.remoteRocksDBMode = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE);
         this.enableCacheLayer = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER);
         this.workingDir = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
+        this.ioParallelism = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
         LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}",
                 remoteRocksDBMode, enableCacheLayer, workingDir);
     }
@@ -144,6 +147,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                                 remoteRocksDBMode,
                                 workingDir,
                                 enableCacheLayer,
+                                ioParallelism,
                                 operatorIdentifier,
                                 env.getUserCodeClassLoader().asClassLoader(),
                                 instanceBasePath,

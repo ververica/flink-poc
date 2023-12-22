@@ -22,6 +22,7 @@ import org.apache.flink.util.concurrent.FutureUtils;
 
 import org.rocksdb.RocksDBException;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,29 +32,24 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * The executor for batch parallel IO operation.
  */
-public class BatchParallelIOExecutor<K> {
+public class BatchParallelIOExecutor<K> implements Closeable {
 
-    private final Collection<K> keys;
+    private final ExecutorService asyncIOExecutor;
 
-    private final int totalKeyNum;
-    private int iterIndex;
-
-    private final Executor asyncIOExecutor;
-
-    public BatchParallelIOExecutor(Collection<K> keys, Executor asyncIOExecutor) {
-        this.keys = keys;
-        this.totalKeyNum = keys.size();
+    public BatchParallelIOExecutor(ExecutorService asyncIOExecutor) {
         this.asyncIOExecutor = asyncIOExecutor;
     }
 
-    public <V> Iterable<V> fetchValues(FetchRocksdbDataFunction<K, V> fetchFunc) throws IOException {
+    public <V> Iterable<V> fetchValues(Collection<K> keys, FetchRocksdbDataFunction<K, V> fetchFunc) throws IOException {
         Iterator<K> keyIter = keys.iterator();
-        ValueArray<V> result = new ValueArray<>(totalKeyNum); //TODO reuse
-        List<CompletableFuture<Void>> futures = new ArrayList<>(totalKeyNum);
+        ValueArray<V> result = new ValueArray<>(keys.size()); //TODO reuse
+        List<CompletableFuture<Void>> futures = new ArrayList<>(keys.size());
+        int iterIndex = 0;
         while (keyIter.hasNext()) {
             final K key = keyIter.next();
             final int keyIndex = iterIndex;
@@ -76,6 +72,11 @@ public class BatchParallelIOExecutor<K> {
         }
 
         return result;
+    }
+
+    @Override
+    public void close() throws IOException {
+        asyncIOExecutor.shutdownNow();
     }
 
     public interface FetchRocksdbDataFunction<K, V> {

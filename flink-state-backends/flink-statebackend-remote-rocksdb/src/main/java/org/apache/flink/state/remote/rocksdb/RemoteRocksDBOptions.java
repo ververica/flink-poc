@@ -45,4 +45,10 @@ public class RemoteRocksDBOptions {
                     .booleanType()
                     .defaultValue(true)
                     .withDescription("");
+
+    public static final ConfigOption<Integer> REMOTE_ROCKSDB_IO_PARALLELISM =
+            ConfigOptions.key("state.backend.remote-rocksdb.io.parallelism")
+                    .intType()
+                    .defaultValue(16)
+                    .withDescription("");
 }

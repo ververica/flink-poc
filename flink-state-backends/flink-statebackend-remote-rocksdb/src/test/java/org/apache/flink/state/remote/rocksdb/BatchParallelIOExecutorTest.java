@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -45,10 +46,10 @@ public class BatchParallelIOExecutorTest {
             keys.add(key);
             heapStateBackend.put(key, value);
         }
-        Executor asyncIOExecutor = Executors.newFixedThreadPool(8);
+        ExecutorService asyncIOExecutor = Executors.newFixedThreadPool(8);
         BatchParallelIOExecutor<Integer> parallelIOExecutor
-                = new BatchParallelIOExecutor<>(keys, asyncIOExecutor);
-        Iterable<String> result = parallelIOExecutor.fetchValues(heapStateBackend::get);
+                = new BatchParallelIOExecutor<>(asyncIOExecutor);
+        Iterable<String> result = parallelIOExecutor.fetchValues(keys, heapStateBackend::get);
         int index = 0;
         for (String value : result) {
             Integer key = keys.get(index++);

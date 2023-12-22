@@ -19,10 +19,12 @@
 package org.apache.flink.runtime.state.batch;
 
 import org.apache.flink.api.common.state.batch.CommittedValue;
+import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -33,7 +35,7 @@ public class BatchCacheValueState<K, N, T>
         N,
         T,
         InternalBatchValueState<K, N, T>>
-        implements InternalBatchValueState<K, N, T> {
+        implements InternalBatchValueState<K, N, T>, KeyedStateBackend.CurrentKeysChangedListener {
 
     private Map<K, CommittedValue<T>> cachedValues = new HashMap<>();
 
@@ -87,12 +89,24 @@ public class BatchCacheValueState<K, N, T>
         }
     }
 
-    public void writeBackCacheData() throws IOException {
-        original.update(cachedValues.values());
-        clearCache();
+    public void writeBackCacheData() {
+        if (cachedValues.isEmpty()) {
+            return;
+        }
+        try {
+            original.update(cachedValues.values());
+            clearCache();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     private void clearCache() {
         cachedValues.clear();
+    }
+
+    @Override
+    public void currentKeysChanged() {
+        writeBackCacheData();
     }
 }

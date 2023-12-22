@@ -51,8 +51,11 @@ import org.rocksdb.RocksDB;
 import javax.annotation.Nonnull;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -64,10 +67,13 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
 
     private final BatchCacheStateConfig batchCacheStateConfig;
 
+    private final BatchParallelIOExecutor<K> batchParallelIOExecutor;
+
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
             boolean enableCacheLayer,
+            int ioParallelism,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
@@ -122,6 +128,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
         this.batchCacheStateConfig = new BatchCacheStateConfig(enableCacheLayer);
+        ExecutorService executor = Executors.newFixedThreadPool(ioParallelism);
+        this.batchParallelIOExecutor = new BatchParallelIOExecutor<>(executor);
     }
     
     RocksDB getDB() {
@@ -212,5 +220,15 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
                         registerResult,
                 RemoteRocksDBKeyedStateBackend<K> backend)
                 throws Exception;
+    }
+
+    public BatchParallelIOExecutor<K> getBatchParallelIOExecutor() {
+        return batchParallelIOExecutor;
+    }
+
+    @Override
+    public void close() throws IOException {
+        batchParallelIOExecutor.close();
+        super.close();
     }
 }

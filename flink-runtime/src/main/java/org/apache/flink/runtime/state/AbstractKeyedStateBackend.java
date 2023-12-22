@@ -65,6 +65,8 @@ public abstract class AbstractKeyedStateBackend<K>
     /** Listeners to changes of ({@link #keyContext}). */
     private final ArrayList<KeySelectionListener<K>> keySelectionListeners;
 
+    private final ArrayList<CurrentKeysChangedListener> currentKeysChangedListeners = new ArrayList<>();
+
     /** So that we can give out state when the user uses the same key. */
     private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName;
 
@@ -271,6 +273,11 @@ public abstract class AbstractKeyedStateBackend<K>
         return keySelectionListeners.remove(listener);
     }
 
+    @Override
+    public void registerCurrentKeysChangedListener(CurrentKeysChangedListener listener) {
+        currentKeysChangedListeners.add(listener);
+    }
+
     /** @see KeyedStateBackend */
     @Override
     public TypeSerializer<K> getKeySerializer() {
@@ -372,7 +379,8 @@ public abstract class AbstractKeyedStateBackend<K>
                         kvState,
                         stateDescriptor,
                         getBatchCacheStateConfig(),
-                        keyContext);
+                        keyContext,
+                        this);
             }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
@@ -476,6 +484,7 @@ public abstract class AbstractKeyedStateBackend<K>
 
     @Override
     public void setCurrentKeys(Collection<K> newKey) {
+        currentKeysChangedListeners.forEach(CurrentKeysChangedListener::currentKeysChanged);
         this.keyContext.setCurrentKeys(newKey);
     }
 

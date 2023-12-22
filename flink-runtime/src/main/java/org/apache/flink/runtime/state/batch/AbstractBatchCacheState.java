@@ -1,11 +1,12 @@
 package org.apache.flink.runtime.state.batch;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 
-public class AbstractBatchCacheState<
-        K, N, V, S extends InternalKvState<K, N, V>> implements InternalKvState<K, N, V> {
+public abstract class AbstractBatchCacheState<
+        K, N, V, S extends InternalKvState<K, N, V>> implements InternalKvState<K, N, V>, KeyedStateBackend.CurrentKeysChangedListener {
 
     protected S original;
 
