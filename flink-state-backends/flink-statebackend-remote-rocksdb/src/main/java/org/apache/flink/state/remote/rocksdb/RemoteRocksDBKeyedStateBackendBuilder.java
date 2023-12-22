@@ -263,6 +263,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 new InternalKeyContextImpl<>(keyGroupRange, numberOfKeyGroups);
         logger.info("Finished building RocksDB keyed state-backend at {}.", instanceBasePath);
         return new RemoteRocksDBKeyedStateBackend<>(
+                this.remoteRocksDBMode,
+                this.workingDir,
                 this.userCodeClassLoader,
                 this.instanceBasePath,
                 this.optionsContainer,
@@ -325,6 +327,9 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     @Override
     protected void prepareDirectories() throws IOException {
+        if (remoteRocksDBMode == RemoteRocksDBMode.LOCAL) {
+            super.prepareDirectories();
+        }
         //TODO
     }
 }

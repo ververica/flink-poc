@@ -519,7 +519,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         }
     }
 
-    private void cleanInstanceBasePath() {
+    protected void cleanInstanceBasePath() {
         LOG.info(
                 "Closed RocksDB State Backend. Cleaning up RocksDB working directory {}.",
                 instanceBasePath);

@@ -40,6 +40,7 @@ import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapp
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
+import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.ResourceGuard;
 
@@ -58,7 +59,12 @@ import java.util.stream.Stream;
 
 public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<K> {
 
+    private RemoteRocksDBMode remoteRocksDBMode;
+    private String workingDir;
+
     public RemoteRocksDBKeyedStateBackend(
+            RemoteRocksDBMode remoteRocksDBMode,
+            String workingDir,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
@@ -110,6 +116,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
                 ttlCompactFiltersManager,
                 keyContext,
                 writeBatchSize);
+        this.remoteRocksDBMode = remoteRocksDBMode;
+        this.workingDir = workingDir;
     }
 
     private static final Map<StateDescriptor.Type, StateCreateFactory> STATE_CREATE_FACTORIES =
@@ -163,5 +171,13 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
 
         createdKVStates.put(stateDesc.getName(), createdState);
         return createdState;
+    }
+
+    @Override
+    protected void cleanInstanceBasePath() {
+        if (remoteRocksDBMode == RemoteRocksDBMode.LOCAL) {
+            super.cleanInstanceBasePath();
+        }
+        //TODO
     }
 }
