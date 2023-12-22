@@ -63,6 +63,9 @@ public class StateBackendLoader {
     private static final String ROCKSDB_STATE_BACKEND_FACTORY =
             "org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackendFactory";
 
+    private static final String REMOTE_ROCKSDB_STATE_BACKEND_FACTORY =
+            "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory";
+
     // ------------------------------------------------------------------------
     //  Configuration shortcut names
     // ------------------------------------------------------------------------
@@ -80,6 +83,8 @@ public class StateBackendLoader {
 
     /** The shortcut configuration name for the RocksDB State Backend. */
     public static final String ROCKSDB_STATE_BACKEND_NAME = "rocksdb";
+
+    public static final String REMOTE_ROCKSDB_STATE_BACKEND_NAME = "remote-rocksdb";
 
     // ------------------------------------------------------------------------
     //  Loading the state backend from a configuration
@@ -159,6 +164,9 @@ public class StateBackendLoader {
 
             case ROCKSDB_STATE_BACKEND_NAME:
                 factoryClassName = ROCKSDB_STATE_BACKEND_FACTORY;
+
+            case REMOTE_ROCKSDB_STATE_BACKEND_NAME:
+                factoryClassName = REMOTE_ROCKSDB_STATE_BACKEND_FACTORY;
 
                 // fall through to the 'default' case that uses reflection to load the backend
                 // that way we can keep RocksDB in a separate module

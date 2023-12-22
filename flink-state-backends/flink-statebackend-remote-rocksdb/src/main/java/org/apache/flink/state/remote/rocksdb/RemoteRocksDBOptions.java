@@ -39,4 +39,10 @@ public class RemoteRocksDBOptions {
                     .stringType()
                     .noDefaultValue()
                     .withDescription("");
+
+    public static final ConfigOption<Boolean> REMOTE_ROCKSDB_ENABLE_CACHE_LAYER =
+            ConfigOptions.key("state.backend.remote-rocksdb.cache-layer.enabled")
+                    .booleanType()
+                    .defaultValue(true)
+                    .withDescription("");
 }

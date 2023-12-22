@@ -97,8 +97,6 @@ public abstract class AbstractKeyedStateBackend<K>
 
     protected final LatencyTrackingStateConfig latencyTrackingStateConfig;
 
-    protected final BatchCacheStateConfig batchCacheStateConfig;
-
     /** Decorates the input and output streams to write key-groups compressed. */
     protected final StreamCompressionDecorator keyGroupCompressionDecorator;
 
@@ -212,7 +210,6 @@ public abstract class AbstractKeyedStateBackend<K>
         this.keyGroupCompressionDecorator = keyGroupCompressionDecorator;
         this.ttlTimeProvider = Preconditions.checkNotNull(ttlTimeProvider);
         this.latencyTrackingStateConfig = Preconditions.checkNotNull(latencyTrackingStateConfig);
-        this.batchCacheStateConfig = new BatchCacheStateConfig(); //TODO support config
         this.keySelectionListeners = keySelectionListeners;
         this.lastState = lastState;
         this.lastName = lastName;
@@ -374,7 +371,7 @@ public abstract class AbstractKeyedStateBackend<K>
                 kvState = BatchCacheStateFactory.createStateAndWrapWithBatchCacheIfEnabled(
                         kvState,
                         stateDescriptor,
-                        batchCacheStateConfig,
+                        getBatchCacheStateConfig(),
                         keyContext);
             }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);

@@ -21,9 +21,17 @@ package org.apache.flink.state.remote.rocksdb;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputDeserializer;
+import org.apache.flink.core.memory.DataOutputSerializer;
+import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
+import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
+import org.apache.flink.runtime.state.VoidNamespace;
+import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
+
+import org.apache.flink.util.Preconditions;
 
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
@@ -36,28 +44,62 @@ import java.io.IOException;
  */
 public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvState<K, N, V>, State {
 
+    protected TypeSerializer<K> keySerializer;
+
     /** Serializer for the namespace. */
-    TypeSerializer<N> namespaceSerializer;
+    protected TypeSerializer<N> namespaceSerializer;
 
     /** Serializer for the state values. */
-    TypeSerializer<V> valueSerializer;
+    protected TypeSerializer<V> valueSerializer;
 
     /** The column family of this particular instance of state. */
-    protected ColumnFamilyHandle columnFamily;
+    protected final ColumnFamilyHandle columnFamily;
 
     protected V defaultValue;
 
-    protected WriteOptions writeOptions;
+    protected final WriteOptions writeOptions;
 
-    protected KeyedStateBackend<K> backend;
+    protected final RemoteRocksDBKeyedStateBackend<K> backend;
 
-    protected RocksDB db;
+    protected final RocksDB db;
 
     protected BatchParallelIOExecutor<K> parallelIOExecutor;
 
-    private ThreadLocal<SerializedCompositeKeyBuilder<K>> sharedKeyNamespaceSerializer;
+    private final ThreadLocal<SerializedCompositeKeyBuilder<K>> sharedKeyNamespaceSerializer;
 
-    protected ThreadLocal<DataInputDeserializer> dataInputView;
+    protected final ThreadLocal<DataInputDeserializer> dataInputView;
+
+    protected final ThreadLocal<DataOutputSerializer> dataOutputView;
+
+    private final int maxParallelism;
+
+    protected AbstractBatchRocksdbState(
+            RemoteRocksDBKeyedStateBackend<K> backend,
+            ColumnFamilyHandle columnFamily,
+            TypeSerializer<K> keySerializer,
+            TypeSerializer<N> namespaceSerializer,
+            TypeSerializer<V> valueSerializer,
+            V defaultValue) {
+        this.backend = backend;
+        this.db = backend.getDB();
+        this.columnFamily = columnFamily;
+        this.keySerializer = keySerializer;
+        this.namespaceSerializer = namespaceSerializer;
+        this.valueSerializer =
+                Preconditions.checkNotNull(valueSerializer, "State value serializer");
+        this.defaultValue = defaultValue;
+        this.writeOptions = backend.getWriteOptions();
+        this.dataOutputView = ThreadLocal.withInitial(() -> new DataOutputSerializer(128));
+        this.dataInputView = ThreadLocal.withInitial(DataInputDeserializer::new);
+        this.maxParallelism = backend.getNumberOfKeyGroups();
+        this.sharedKeyNamespaceSerializer = ThreadLocal.withInitial(() ->
+                new SerializedCompositeKeyBuilder<>(
+                        keySerializer,
+                        CompositeKeySerializationUtils.computeRequiredBytesInKeyGroupPrefix(
+                               maxParallelism),
+                        32));
+    }
+
 
     @Override
     public TypeSerializer<N> getNamespaceSerializer() {
@@ -83,11 +125,21 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
     }
 
     protected byte[] serializeCurrentKeyWithGroupAndNamespace(K key) {
-        throw new UnsupportedOperationException();
+        SerializedCompositeKeyBuilder<K> keyBuilder = sharedKeyNamespaceSerializer.get();
+        keyBuilder.setKeyAndKeyGroup(key, KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism));
+        return keyBuilder.buildCompositeKeyNamespace(VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE);
     }
 
     byte[] serializeValue(V value) throws IOException {
-        throw new UnsupportedOperationException();
+        DataOutputSerializer outputView = dataOutputView.get();
+        outputView.clear();
+        return serializeValueInternal(outputView, value, valueSerializer);
+    }
+
+    private <T> byte[] serializeValueInternal(DataOutputSerializer outputView, T value, TypeSerializer<T> serializer)
+            throws IOException {
+        serializer.serialize(value, outputView);
+        return outputView.getCopyOfBuffer();
     }
 
     @Override

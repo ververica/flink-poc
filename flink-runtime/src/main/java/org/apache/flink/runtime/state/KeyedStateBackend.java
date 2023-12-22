@@ -23,6 +23,7 @@ import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
+import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
 import org.apache.flink.util.Disposable;
 
 import java.util.Collection;
@@ -49,6 +50,11 @@ public interface KeyedStateBackend<K>
     default boolean isSupportBatchInterfaces() {
         return false;
     }
+
+    default BatchCacheStateConfig getBatchCacheStateConfig() {
+       throw new UnsupportedOperationException();
+    }
+
 
     default void setCurrentKeys(Collection<K> key) {
         throw new UnsupportedOperationException("Don't support setCurrentKeys yet");

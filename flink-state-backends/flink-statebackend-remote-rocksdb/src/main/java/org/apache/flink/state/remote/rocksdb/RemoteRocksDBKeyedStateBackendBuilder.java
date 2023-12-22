@@ -95,9 +95,12 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private String workingDir;
 
+    private final boolean enableCacheLayer;
+
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
+            boolean enableCacheLayer,
             String operatorIdentifier,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
@@ -137,6 +140,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 cancelStreamRegistry);
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
+        this.enableCacheLayer = enableCacheLayer;
     }
 
     @Override
@@ -265,6 +269,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         return new RemoteRocksDBKeyedStateBackend<>(
                 this.remoteRocksDBMode,
                 this.workingDir,
+                this.enableCacheLayer,
                 this.userCodeClassLoader,
                 this.instanceBasePath,
                 this.optionsContainer,

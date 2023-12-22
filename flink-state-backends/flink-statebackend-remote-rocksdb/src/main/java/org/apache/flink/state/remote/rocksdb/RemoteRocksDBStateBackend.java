@@ -59,6 +59,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
 
     private RemoteRocksDBMode remoteRocksDBMode;
 
+    private boolean enableCacheLayer;
+
     private String workingDir;
 
     public RemoteRocksDBStateBackend() {
@@ -69,7 +71,10 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
             EmbeddedRocksDBStateBackend original, ReadableConfig config, ClassLoader classLoader) {
         super(original, config, classLoader);
         this.remoteRocksDBMode = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE);
+        this.enableCacheLayer = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER);
         this.workingDir = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
+        LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}",
+                remoteRocksDBMode, enableCacheLayer, workingDir);
     }
 
     @Override
@@ -138,6 +143,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                         new RemoteRocksDBKeyedStateBackendBuilder<>(
                                 remoteRocksDBMode,
                                 workingDir,
+                                enableCacheLayer,
                                 operatorIdentifier,
                                 env.getUserCodeClassLoader().asClassLoader(),
                                 instanceBasePath,

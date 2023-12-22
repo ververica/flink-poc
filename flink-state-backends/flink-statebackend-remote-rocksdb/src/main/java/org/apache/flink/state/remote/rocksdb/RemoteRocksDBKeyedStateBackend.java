@@ -25,7 +25,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.contrib.streaming.state.RocksDBKeyedStateBackend;
 import org.apache.flink.contrib.streaming.state.RocksDBNativeMetricMonitor;
 import org.apache.flink.contrib.streaming.state.RocksDBResourceContainer;
-import org.apache.flink.contrib.streaming.state.RocksDBValueState;
 import org.apache.flink.contrib.streaming.state.RocksDBWriteBatchWrapper;
 import org.apache.flink.contrib.streaming.state.snapshot.RocksDBSnapshotStrategyBase;
 import org.apache.flink.contrib.streaming.state.ttl.RocksDbTtlCompactFiltersManager;
@@ -36,6 +35,7 @@ import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapper;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -62,9 +62,12 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     private RemoteRocksDBMode remoteRocksDBMode;
     private String workingDir;
 
+    private final BatchCacheStateConfig batchCacheStateConfig;
+
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
+            boolean enableCacheLayer,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
             RocksDBResourceContainer optionsContainer,
@@ -118,13 +121,33 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
                 writeBatchSize);
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
+        this.batchCacheStateConfig = new BatchCacheStateConfig(enableCacheLayer);
+    }
+    
+    RocksDB getDB() {
+        return db;
+    }
+
+    @Override
+    public void setCurrentKey(K newKey) {
+        setKeyContext(newKey);
+    }
+
+    @Override
+    public boolean isSupportBatchInterfaces() {
+        return true;
+    }
+
+    @Override
+    public BatchCacheStateConfig getBatchCacheStateConfig() {
+        return batchCacheStateConfig;
     }
 
     private static final Map<StateDescriptor.Type, StateCreateFactory> STATE_CREATE_FACTORIES =
             Stream.of(
                             Tuple2.of(
                                     StateDescriptor.Type.VALUE,
-                                    (StateCreateFactory) RocksDBValueState::create))
+                                    (StateCreateFactory) BatchRocksdbValueState::create))
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
 
     @Nonnull
@@ -164,7 +187,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             }
             createdState =
                     stateCreateFactory.createState(
-                            stateDesc, registerResult, RemoteRocksDBKeyedStateBackend.this);
+                            stateDesc, keySerializer, registerResult, RemoteRocksDBKeyedStateBackend.this);
         } else {
             throw new UnsupportedOperationException("Don't support updating yet");
         }
@@ -179,5 +202,15 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             super.cleanInstanceBasePath();
         }
         //TODO
+    }
+
+    protected interface StateCreateFactory {
+        <K, N, SV, S extends State, IS extends S> IS createState(
+                StateDescriptor<S, SV> stateDesc,
+                TypeSerializer<K> keySerializer,
+                Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                        registerResult,
+                RemoteRocksDBKeyedStateBackend<K> backend)
+                throws Exception;
     }
 }

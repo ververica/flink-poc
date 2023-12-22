@@ -18,12 +18,17 @@
 
 package org.apache.flink.state.remote.rocksdb;
 
+import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.batch.CommittedValue;
 import org.apache.flink.api.common.state.batch.CommittedValue.CommittedValueType;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputDeserializer;
+import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 
+import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 
 import java.io.IOException;
@@ -34,6 +39,16 @@ import java.util.Iterator;
  */
 public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K, N, V>
         implements InternalBatchValueState<K, N, V> {
+
+    public BatchRocksdbValueState(
+            ColumnFamilyHandle columnFamily,
+            TypeSerializer<K> keySerializer,
+            TypeSerializer<N> namespaceSerializer,
+            TypeSerializer<V> valueSerializer,
+            V defaultValue,
+            RemoteRocksDBKeyedStateBackend<K> backend) {
+        super(backend, columnFamily, keySerializer, namespaceSerializer, valueSerializer, defaultValue);
+    }
 
     @Override
     public Iterable<V> values() throws IOException {
@@ -121,5 +136,22 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
     @Override
     public TypeSerializer getKeySerializer() {
         throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <K, N, SV, S extends State, IS extends S> IS create(
+            StateDescriptor<S, SV> stateDesc,
+            TypeSerializer<K> keySerializer,
+            Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                    registerResult,
+            RemoteRocksDBKeyedStateBackend<K> backend) {
+        return (IS)
+                new BatchRocksdbValueState<>(
+                        registerResult.f0,
+                        keySerializer,
+                        registerResult.f1.getNamespaceSerializer(),
+                        registerResult.f1.getStateSerializer(),
+                        stateDesc.getDefaultValue(),
+                        backend);
     }
 }

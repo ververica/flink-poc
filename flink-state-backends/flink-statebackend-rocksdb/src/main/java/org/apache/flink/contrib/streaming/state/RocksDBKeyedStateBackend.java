@@ -427,8 +427,12 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
 
     @Override
     public void setCurrentKey(K newKey) {
-        super.setCurrentKey(newKey);
+        setKeyContext(newKey);
         sharedRocksKeyBuilder.setKeyAndKeyGroup(getCurrentKey(), getCurrentKeyGroupIndex());
+    }
+
+    public void setKeyContext(K newKey) {
+        super.setCurrentKey(newKey);
     }
 
     /** Should only be called by one thread, and only after all accesses to the DB happened. */
