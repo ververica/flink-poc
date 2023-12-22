@@ -28,6 +28,8 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.batch.BatchCacheStateFactory;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -94,6 +96,8 @@ public abstract class AbstractKeyedStateBackend<K>
     protected final TtlTimeProvider ttlTimeProvider;
 
     protected final LatencyTrackingStateConfig latencyTrackingStateConfig;
+
+    protected final BatchCacheStateConfig batchCacheStateConfig;
 
     /** Decorates the input and output streams to write key-groups compressed. */
     protected final StreamCompressionDecorator keyGroupCompressionDecorator;
@@ -208,6 +212,7 @@ public abstract class AbstractKeyedStateBackend<K>
         this.keyGroupCompressionDecorator = keyGroupCompressionDecorator;
         this.ttlTimeProvider = Preconditions.checkNotNull(ttlTimeProvider);
         this.latencyTrackingStateConfig = Preconditions.checkNotNull(latencyTrackingStateConfig);
+        this.batchCacheStateConfig = new BatchCacheStateConfig(); //TODO support config
         this.keySelectionListeners = keySelectionListeners;
         this.lastState = lastState;
         this.lastName = lastName;
@@ -364,11 +369,21 @@ public abstract class AbstractKeyedStateBackend<K>
                                     namespaceSerializer, stateDescriptor, this, ttlTimeProvider),
                             stateDescriptor,
                             latencyTrackingStateConfig);
+
+            if (isSupportBatchInterfaces()) {
+                kvState = BatchCacheStateFactory.createStateAndWrapWithBatchCacheIfEnabled(
+                        kvState,
+                        stateDescriptor,
+                        batchCacheStateConfig,
+                        keyContext);
+            }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
         }
         return (S) kvState;
     }
+
+
 
     public void publishQueryableStateIfEnabled(
             StateDescriptor<?, ?> stateDescriptor, InternalKvState<?, ?, ?> kvState) {

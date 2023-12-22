@@ -44,6 +44,10 @@ public class CommittedValue<T> {
         return new CommittedValue<>(value, valueType);
     }
 
+    public static <T> CommittedValue<T> ofDeletedValue() {
+        return new CommittedValue<>(null, CommittedValueType.DELETE);
+    }
+
     public enum CommittedValueType {
         UPDATE, DELETE, UNMODIFIED
     }

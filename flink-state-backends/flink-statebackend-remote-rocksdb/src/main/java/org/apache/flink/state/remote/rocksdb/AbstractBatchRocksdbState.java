@@ -23,10 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
-import org.apache.flink.runtime.state.VoidNamespace;
-import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.internal.batch.InternalBatchKvState;
-import org.apache.flink.util.concurrent.Executors;
+import org.apache.flink.runtime.state.internal.InternalKvState;
 
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDB;
@@ -37,7 +34,7 @@ import java.io.IOException;
 /**
  * The abstract class for rocksdb batch State.
  */
-public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalBatchKvState<K, N, V>, State {
+public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvState<K, N, V>, State {
 
     /** Serializer for the namespace. */
     TypeSerializer<N> namespaceSerializer;
@@ -90,6 +87,25 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalBatc
     }
 
     byte[] serializeValue(V value) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setCurrentNamespace(N namespace) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] getSerializedValue(
+            byte[] serializedKeyAndNamespace,
+            TypeSerializer<K> safeKeySerializer,
+            TypeSerializer<N> safeNamespaceSerializer,
+            TypeSerializer<V> safeValueSerializer) throws Exception {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public StateIncrementalVisitor<K, N, V> getStateIncrementalVisitor(int recommendedMaxNumberOfReturnedRecords) {
         throw new UnsupportedOperationException();
     }
 }

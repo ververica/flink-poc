@@ -79,6 +79,41 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
     }
 
     @Override
+    public V value() throws IOException {
+        try {
+            byte[] valueBytes =
+                    db.get(columnFamily, serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey()));
+
+            if (valueBytes == null) {
+                return getDefaultValue();
+            }
+            DataInputDeserializer deserializeView = dataInputView.get();
+            deserializeView.setBuffer(valueBytes);
+            return valueSerializer.deserialize(deserializeView);
+        } catch (RocksDBException e) {
+            throw new IOException("Error while retrieving data from RocksDB.", e);
+        }
+    }
+
+    @Override
+    public void update(V value) throws IOException {
+        if (value == null) {
+            clear();
+            return;
+        }
+
+        try {
+            db.put(
+                    columnFamily,
+                    writeOptions,
+                    serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey()),
+                    serializeValue(value));
+        } catch (RocksDBException e) {
+            throw new IOException("Error while adding data to RocksDB", e);
+        }
+    }
+
+    @Override
     public void clear() {
         throw new UnsupportedOperationException();
     }

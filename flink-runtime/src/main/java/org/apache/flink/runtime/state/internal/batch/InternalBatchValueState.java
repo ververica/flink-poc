@@ -19,8 +19,9 @@
 package org.apache.flink.runtime.state.internal.batch;
 
 import org.apache.flink.api.common.state.batch.BatchValueState;
+import org.apache.flink.runtime.state.internal.InternalKvState;
 
 /**
  * InternalBatchValueState.
  */
-public interface InternalBatchValueState<K, N, T> extends InternalBatchKvState<K, N, T>, BatchValueState<T> {}
+public interface InternalBatchValueState<K, N, T> extends InternalKvState<K, N, T>, BatchValueState<T> {}

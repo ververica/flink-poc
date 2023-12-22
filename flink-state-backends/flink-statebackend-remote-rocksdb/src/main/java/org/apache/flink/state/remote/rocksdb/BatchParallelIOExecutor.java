@@ -52,7 +52,7 @@ public class BatchParallelIOExecutor<K> {
 
     public <V> Iterable<V> fetchValues(FetchRocksdbDataFunction<K, V> fetchFunc) throws IOException {
         Iterator<K> keyIter = keys.iterator();
-        ValueArray<V> result = new ValueArray<>(totalKeyNum);
+        ValueArray<V> result = new ValueArray<>(totalKeyNum); //TODO reuse
         List<CompletableFuture<Void>> futures = new ArrayList<>(totalKeyNum);
         while (keyIter.hasNext()) {
             final K key = keyIter.next();

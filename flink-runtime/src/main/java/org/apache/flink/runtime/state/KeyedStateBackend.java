@@ -46,6 +46,10 @@ public interface KeyedStateBackend<K>
     /** @return Current key. */
     K getCurrentKey();
 
+    default boolean isSupportBatchInterfaces() {
+        return false;
+    }
+
     default void setCurrentKeys(Collection<K> key) {
         throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
     }
