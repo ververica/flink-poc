@@ -425,6 +425,9 @@ public class ConnectedStreams<IN1, IN2> {
             String functionName,
             TypeInformation<R> outTypeInfo,
             TwoInputStreamOperator<IN1, IN2, R> operator) {
+        if (inputStream1 instanceof KeyedStream && inputStream2 instanceof KeyedStream) {
+            return doTransform(functionName, outTypeInfo, SimpleOperatorFactory.ofKeyed(operator));
+        }
         return doTransform(functionName, outTypeInfo, SimpleOperatorFactory.of(operator));
     }
 
