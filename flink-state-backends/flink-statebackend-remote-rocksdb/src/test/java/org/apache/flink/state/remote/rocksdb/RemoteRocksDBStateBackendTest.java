@@ -57,23 +57,66 @@ public class RemoteRocksDBStateBackendTest {
 
     @Test
     public void testBatchValueStateWithCacheLayer() throws Exception {
-        testBatchValueState(true);
+        ValueStateDescriptor<String> kvId = new ValueStateDescriptor<>("id", String.class);
+        CheckpointableKeyedStateBackend<Integer> backend =
+                createKeyedBackend(IntSerializer.INSTANCE, true);
+        try {
+
+            ValueState<String> state =
+                    backend.getPartitionedState(
+                            VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
+            List<Integer> keys = Arrays.asList(1, 2, 3, 4, 5);
+            backend.setCurrentKeys(keys);
+            for (Integer key : keys) {
+                backend.setCurrentKey(key);
+                assertNull(state.value());
+            }
+
+            backend.setCurrentKey(2);
+            state.update("aa");
+            assertEquals("aa", state.value());
+
+            backend.setCurrentKey(4);
+            state.update(null);
+            assertNull(state.value());
+
+            backend.setCurrentKey(5);
+            state.update("bb");
+            assertEquals("bb", state.value());
+
+            keys = Arrays.asList(2, 4, 5, 7, 8);
+            backend.setCurrentKeys(keys);
+
+            backend.setCurrentKey(2);
+            assertEquals("aa", state.value());
+
+            backend.setCurrentKey(4);
+            assertNull(state.value());
+
+            backend.setCurrentKey(5);
+            assertEquals("bb", state.value());
+
+            backend.setCurrentKey(7);
+            assertNull(state.value());
+
+            backend.setCurrentKey(8);
+            assertNull(state.value());
+        } finally {
+            IOUtils.closeQuietly(backend);
+            backend.dispose();
+        }
     }
+
 
     @Test
     public void testBatchValueStateWithoutCacheLayer() throws Exception {
-        testBatchValueState(false);
-    }
-
-
-    public void testBatchValueState(boolean enableCacheLayer) throws Exception {
         ValueStateDescriptor<String> kvId = new ValueStateDescriptor<>("id", String.class);
 
         TypeSerializer<Integer> keySerializer = IntSerializer.INSTANCE;
         TypeSerializer<VoidNamespace> namespaceSerializer = VoidNamespaceSerializer.INSTANCE;
 
         CheckpointableKeyedStateBackend<Integer> backend =
-                createKeyedBackend(IntSerializer.INSTANCE, enableCacheLayer);
+                createKeyedBackend(IntSerializer.INSTANCE, false);
         try {
             BatchValueState<String> state =
                     (BatchValueState) backend.getPartitionedState(
@@ -125,6 +168,25 @@ public class RemoteRocksDBStateBackendTest {
             assertNull(iterator.next());
             assertEquals("jj", iterator.next());
 
+            keys = Arrays.asList(3, 5, 7, 8, 9);
+            backend.setCurrentKeys(keys);
+
+            updateValues.clear();
+            updateValues.add(CommittedValue.of("kk", CommittedValue.CommittedValueType.UPDATE));
+            updateValues.add(CommittedValue.ofDeletedValue());
+            updateValues.add(CommittedValue.of("ll", CommittedValue.CommittedValueType.UNMODIFIED));
+            updateValues.add(CommittedValue.of("mm", CommittedValue.CommittedValueType.UNMODIFIED));
+            updateValues.add(CommittedValue.of("nn", CommittedValue.CommittedValueType.UPDATE));
+            state.update(updateValues);
+
+            valueItr = state.values();
+            iterator = valueItr.iterator();
+            assertTrue(iterator.hasNext());
+            assertEquals("kk", iterator.next());
+            assertNull(iterator.next());
+            assertEquals("jj", iterator.next());
+            assertNull(iterator.next());
+            assertEquals("nn", iterator.next());
         } finally {
             IOUtils.closeQuietly(backend);
             backend.dispose();
@@ -302,10 +364,10 @@ public class RemoteRocksDBStateBackendTest {
     protected ConfigurableStateBackend getStateBackend(boolean enableCacheLayer) throws IOException {
         RemoteRocksDBStateBackend backend = new RemoteRocksDBStateBackend();
         Configuration configuration = new Configuration();
-        configuration.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBMode.REMOTE);
-        configuration.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://localhost:9000");
-//        configuration.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBMode.LOCAL);
-//        configuration.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp/");
+//        configuration.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBMode.REMOTE);
+//        configuration.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://localhost:9000");
+        configuration.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBMode.LOCAL);
+        configuration.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp/");
         if (enableCacheLayer) {
             configuration.set(REMOTE_ROCKSDB_ENABLE_CACHE_LAYER, true);
         } else {

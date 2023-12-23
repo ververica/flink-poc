@@ -43,6 +43,8 @@ public class WordCountTest {
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
         config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
         config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://localhost:9000");
+//        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
+//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
         return config;
     }
 
