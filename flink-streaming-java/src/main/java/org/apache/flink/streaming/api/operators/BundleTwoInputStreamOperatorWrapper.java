@@ -274,6 +274,7 @@ public class BundleTwoInputStreamOperatorWrapper<IN1, IN2, OUT> implements TwoIn
             keyToValueMap2.clear();
             nextIsList1.clear();
             current = 0;
+            wrapped.clearCurrentKeysCache();
         }
     }
 }

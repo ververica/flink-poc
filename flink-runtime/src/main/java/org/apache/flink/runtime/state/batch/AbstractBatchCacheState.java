@@ -6,7 +6,7 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 
 public abstract class AbstractBatchCacheState<
-        K, N, V, S extends InternalKvState<K, N, V>> implements InternalKvState<K, N, V>, KeyedStateBackend.CurrentKeysChangedListener {
+        K, N, V, S extends InternalKvState<K, N, V>> implements InternalKvState<K, N, V>, KeyedStateBackend.ClearCurrentKeysCacheListener {
 
     protected S original;
 

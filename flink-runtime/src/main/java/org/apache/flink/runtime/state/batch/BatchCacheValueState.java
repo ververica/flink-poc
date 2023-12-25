@@ -24,10 +24,15 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalValueState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class BatchCacheValueState<K, N, T>
@@ -36,9 +41,10 @@ public class BatchCacheValueState<K, N, T>
         N,
         T,
         InternalBatchValueState<K, N, T>>
-        implements InternalValueState<K, N, T>, KeyedStateBackend.CurrentKeysChangedListener {
+        implements InternalValueState<K, N, T>, KeyedStateBackend.ClearCurrentKeysCacheListener {
 
-    private Map<K, CommittedValue<T>> cachedValues = new HashMap<>();
+    private static final Logger LOG = LoggerFactory.getLogger(BatchCacheValueState.class);
+    private final Map<K, CommittedValue<T>> cachedValues = new HashMap<>();
 
     public BatchCacheValueState(InternalBatchValueState<K, N, T> original,
                                 InternalKeyContext<K> keyContext,
@@ -48,10 +54,14 @@ public class BatchCacheValueState<K, N, T>
 
     @Override
     public T value() throws IOException {
-        if (cachedValues.isEmpty()) {
-            Iterable<T> values = original.values();
-            fullFillCache(values);
+        if (cachedValues.containsKey(keyContext.getCurrentKey())) {
+            return cachedValues.get(keyContext.getCurrentKey()).getValue();
         }
+
+        // load from stateBackend, and try to fill cache
+        Iterable<T> values = original.values();
+        tryFillCache(values);
+
         return cachedValues.get(keyContext.getCurrentKey()).getValue();
     }
 
@@ -65,12 +75,16 @@ public class BatchCacheValueState<K, N, T>
         cachedValues.put(keyContext.getCurrentKey(), CommittedValue.ofDeletedValue());
     }
 
-    private void fullFillCache(Iterable<T> values) {
+    private void tryFillCache(Iterable<T> values) {
         Iterator<K> keyIter = keyContext.getCurrentKeys().iterator();
         for (T value : values) {
-            cachedValues.put(
-                    keyIter.next(),
-                    CommittedValue.of(value, CommittedValue.CommittedValueType.UNMODIFIED));
+            K key = keyIter.next();
+            if (!cachedValues.containsKey(key)) {
+                cachedValues.put(
+                        key,
+                        CommittedValue.of(value, CommittedValue.CommittedValueType.UNMODIFIED));
+            }
+            LOG.info("try fill cache {}", values);
         }
     }
 
@@ -78,16 +92,25 @@ public class BatchCacheValueState<K, N, T>
         if (cachedValues.isEmpty()) {
             return;
         }
+
+        List<K> keys = new ArrayList<>(cachedValues.size());
+        List<CommittedValue<T>> values = new ArrayList<>(cachedValues.size());
+        cachedValues.entrySet().forEach(entry -> {
+            keys.add(entry.getKey());
+            values.add(entry.getValue());
+        });
         try {
-            original.update(cachedValues.values());
+            keyContext.setCurrentKeys(keys);
+            original.update(values);
             cachedValues.clear();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+        LOG.info("clear cache with keys {} value {}", keys, values);
     }
 
     @Override
-    public void currentKeysChanged() {
+    public void notifyClearCache() {
         writeBackCacheData();
     }
 }

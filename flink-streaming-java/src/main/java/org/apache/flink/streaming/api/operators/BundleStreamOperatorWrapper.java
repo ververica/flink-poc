@@ -197,6 +197,7 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
         void clear() {
             keyToValueMap.clear();
             current = 0;
+            wrapped.clearCurrentKeysCache();
         }
     }
 }

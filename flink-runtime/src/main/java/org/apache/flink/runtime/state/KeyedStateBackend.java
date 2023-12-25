@@ -64,6 +64,10 @@ public interface KeyedStateBackend<K>
         throw new UnsupportedOperationException("Don't support getCurrentKeys yet");
     }
 
+    default void clearCurrentKeysCache() {
+        throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
+    }
+
     /** @return Serializer of the key. */
     TypeSerializer<K> getKeySerializer();
 
@@ -156,7 +160,7 @@ public interface KeyedStateBackend<K>
      */
     boolean deregisterKeySelectionListener(KeySelectionListener<K> listener);
 
-    default void registerCurrentKeysChangedListener(CurrentKeysChangedListener listener) {
+    default void registerCurrentKeysChangedListener(ClearCurrentKeysCacheListener listener) {
         throw new UnsupportedOperationException();
     }
 
@@ -187,8 +191,8 @@ public interface KeyedStateBackend<K>
     }
 
     @FunctionalInterface
-    interface CurrentKeysChangedListener {
+    interface ClearCurrentKeysCacheListener {
         /** Callback when key context is switched. */
-        void currentKeysChanged();
+        void notifyClearCache();
     }
 }

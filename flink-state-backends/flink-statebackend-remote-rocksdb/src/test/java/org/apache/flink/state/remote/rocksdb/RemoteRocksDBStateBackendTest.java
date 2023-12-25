@@ -56,6 +56,88 @@ public class RemoteRocksDBStateBackendTest {
     }
 
     @Test
+    public void testTowBatchValueStateWithCacheLayer() throws Exception {
+        CheckpointableKeyedStateBackend<Integer> backend =
+                createKeyedBackend(IntSerializer.INSTANCE, true);
+        ValueStateDescriptor<String> kvId1 = new ValueStateDescriptor<>("id-1", String.class);
+        ValueStateDescriptor<String> kvId2 = new ValueStateDescriptor<>("id-2", String.class);
+
+        try {
+            ValueState<String> leftState =
+                    backend.getPartitionedState(
+                            VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId1);
+            ValueState<String> rightState =
+                    backend.getPartitionedState(
+                            VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId2);
+            List<Integer> leftKeys = Arrays.asList(1, 2, 3, 4, 5);
+            List<Integer> rightKeys = Arrays.asList(5, 6, 7, 8);
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(2);
+            leftState.update("aa");
+            assertNull(rightState.value());
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(5);
+            rightState.update("bb");
+            assertNull(leftState.value());
+
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(5);
+            leftState.update("cc");
+            assertEquals("bb", rightState.value());
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(5);
+            rightState.update("ff");
+            assertEquals("cc", leftState.value());
+
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(2);
+            assertEquals("aa", leftState.value());
+            assertNull(rightState.value());
+
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(5);
+            assertEquals("cc", leftState.value());
+            assertEquals("ff", rightState.value());
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(5);
+            assertEquals("ff", rightState.value());
+            assertEquals("cc", leftState.value());
+
+            backend.clearCurrentKeysCache();
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(7);
+            rightState.update("dd");
+            assertNull(leftState.value());
+
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(2);
+            assertEquals("aa", leftState.value());
+            assertNull(rightState.value());
+
+            backend.setCurrentKeys(leftKeys);
+            backend.setCurrentKey(5);
+            assertEquals("cc", leftState.value());
+            assertEquals("ff", rightState.value());
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(5);
+            assertEquals("ff", rightState.value());
+            assertEquals("cc", leftState.value());
+
+            backend.setCurrentKeys(rightKeys);
+            backend.setCurrentKey(7);
+            assertEquals("dd", rightState.value());
+        } finally {
+            IOUtils.closeQuietly(backend);
+            backend.dispose();
+        }
+    }
+
+    @Test
     public void testBatchValueStateWithCacheLayer() throws Exception {
         ValueStateDescriptor<String> kvId = new ValueStateDescriptor<>("id", String.class);
         CheckpointableKeyedStateBackend<Integer> backend =
@@ -83,6 +165,8 @@ public class RemoteRocksDBStateBackendTest {
             backend.setCurrentKey(5);
             state.update("bb");
             assertEquals("bb", state.value());
+
+            backend.clearCurrentKeysCache();
 
             keys = Arrays.asList(2, 4, 5, 7, 8);
             backend.setCurrentKeys(keys);

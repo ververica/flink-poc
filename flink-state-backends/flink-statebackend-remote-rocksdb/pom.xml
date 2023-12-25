@@ -28,7 +28,7 @@ under the License.
 		<artifactId>flink-state-backends</artifactId>
 		<version>1.19-SNAPSHOT</version>
 	</parent>
-	<groupId>com.alibaba.ververica</groupId>
+
 	<artifactId>flink-statebackend-remote-rocksdb</artifactId>
 	<name>Flink : State backends : Remote-RocksDB</name>
 

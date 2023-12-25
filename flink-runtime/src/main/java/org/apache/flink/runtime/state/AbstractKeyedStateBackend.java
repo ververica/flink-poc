@@ -28,7 +28,6 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
 import org.apache.flink.runtime.state.batch.BatchCacheStateFactory;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
@@ -65,7 +64,7 @@ public abstract class AbstractKeyedStateBackend<K>
     /** Listeners to changes of ({@link #keyContext}). */
     private final ArrayList<KeySelectionListener<K>> keySelectionListeners;
 
-    private final ArrayList<CurrentKeysChangedListener> currentKeysChangedListeners = new ArrayList<>();
+    private final ArrayList<ClearCurrentKeysCacheListener> clearCurrentKeysCacheListeners = new ArrayList<>();
 
     /** So that we can give out state when the user uses the same key. */
     private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName;
@@ -274,8 +273,8 @@ public abstract class AbstractKeyedStateBackend<K>
     }
 
     @Override
-    public void registerCurrentKeysChangedListener(CurrentKeysChangedListener listener) {
-        currentKeysChangedListeners.add(listener);
+    public void registerCurrentKeysChangedListener(ClearCurrentKeysCacheListener listener) {
+        clearCurrentKeysCacheListeners.add(listener);
     }
 
     /** @see KeyedStateBackend */
@@ -388,8 +387,6 @@ public abstract class AbstractKeyedStateBackend<K>
         return (S) kvState;
     }
 
-
-
     public void publishQueryableStateIfEnabled(
             StateDescriptor<?, ?> stateDescriptor, InternalKvState<?, ?, ?> kvState) {
         if (stateDescriptor.isQueryable()) {
@@ -484,12 +481,16 @@ public abstract class AbstractKeyedStateBackend<K>
 
     @Override
     public void setCurrentKeys(Collection<K> newKey) {
-        currentKeysChangedListeners.forEach(CurrentKeysChangedListener::currentKeysChanged);
         this.keyContext.setCurrentKeys(newKey);
     }
 
     @Override
     public Collection<K> getCurrentKeys() {
         return this.keyContext.getCurrentKeys();
+    }
+
+    @Override
+    public void clearCurrentKeysCache() {
+        clearCurrentKeysCacheListeners.forEach(ClearCurrentKeysCacheListener::notifyClearCache);
     }
 }

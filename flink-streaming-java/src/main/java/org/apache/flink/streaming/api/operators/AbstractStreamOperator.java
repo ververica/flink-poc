@@ -523,6 +523,10 @@ public abstract class AbstractStreamOperator<OUT>
         return stateHandler.getCurrentKeys();
     }
 
+    public void clearCurrentKeysCache() {
+        stateHandler.clearCurrentKeysCache();;
+    }
+
     public KeyedStateStore getKeyedStateStore() {
         if (stateHandler == null) {
             return null;

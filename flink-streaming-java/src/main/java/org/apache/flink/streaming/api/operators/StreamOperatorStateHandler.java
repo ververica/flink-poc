@@ -420,6 +420,12 @@ public class StreamOperatorStateHandler {
         }
     }
 
+    public void clearCurrentKeysCache() {
+        if (keyedStateBackend != null) {
+            keyedStateBackend.clearCurrentKeysCache();
+        }
+    }
+
     public Optional<KeyedStateStore> getKeyedStateStore() {
         return Optional.ofNullable(keyedStateStore);
     }

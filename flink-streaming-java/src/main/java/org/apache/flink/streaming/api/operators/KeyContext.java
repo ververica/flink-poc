@@ -39,4 +39,8 @@ public interface KeyContext {
     default Collection<?> getCurrentKeys() {
         throw new UnsupportedOperationException("not implemented");
     }
+
+    default void clearCurrentKeysCache() {
+        throw new UnsupportedOperationException("not implemented");
+    }
 }
