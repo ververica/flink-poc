@@ -84,7 +84,7 @@ public class BatchCacheValueState<K, N, T>
                         key,
                         CommittedValue.of(value, CommittedValue.CommittedValueType.UNMODIFIED));
             }
-            LOG.info("try fill cache {}", values);
+            LOG.debug("try fill cache {}", values);
         }
     }
 
@@ -106,7 +106,7 @@ public class BatchCacheValueState<K, N, T>
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-        LOG.info("clear cache with keys {} value {}", keys, values);
+        LOG.debug("clear cache with keys {} value {}", keys, values);
     }
 
     @Override
