@@ -64,7 +64,7 @@ under the License.
 		<dependency>
 			<groupId>org.rocksdb</groupId>
 			<artifactId>rocksdbjni</artifactId>
-			<version>8.5.3-hdfs-rc7-SNAPSHOT</version>
+			<version>8.5.3-hdfs-rc8-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
