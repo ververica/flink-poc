@@ -163,11 +163,10 @@ public class StateBackendLoader {
                 return hashMapStateBackend;
 
             case ROCKSDB_STATE_BACKEND_NAME:
-                factoryClassName = ROCKSDB_STATE_BACKEND_FACTORY;
-
             case REMOTE_ROCKSDB_STATE_BACKEND_NAME:
-                factoryClassName = REMOTE_ROCKSDB_STATE_BACKEND_FACTORY;
-
+                factoryClassName = (ROCKSDB_STATE_BACKEND_NAME.equalsIgnoreCase(backendName))
+                        ? ROCKSDB_STATE_BACKEND_FACTORY
+                        : REMOTE_ROCKSDB_STATE_BACKEND_FACTORY;
                 // fall through to the 'default' case that uses reflection to load the backend
                 // that way we can keep RocksDB in a separate module
 
