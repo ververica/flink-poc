@@ -36,7 +36,6 @@ import org.apache.flink.contrib.streaming.state.ttl.RocksDbTtlCompactFiltersMana
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.AbstractKeyedStateBackendBuilder;
 import org.apache.flink.runtime.state.BackendBuildingException;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
 import org.apache.flink.runtime.state.IncrementalKeyedStateHandle;
@@ -60,7 +59,7 @@ import org.apache.flink.util.ResourceGuard;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
-import org.rocksdb.HdfsEnv;
+import org.rocksdb.FlinkEnv;
 import org.rocksdb.InfoLogLevel;
 import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
@@ -312,7 +311,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         DBOptions dbOptions = optionsContainer.getDbOptions();
         if (remoteRocksDBMode == RemoteRocksDBMode.REMOTE) {
             dbOptions.setCreateIfMissing(true)
-                    .setEnv(new HdfsEnv(workingDir + instanceRocksDBPath))
+                    .setEnv(new FlinkEnv(workingDir + instanceRocksDBPath))
                     .setDbLogDir(".")
                     .setLogger(new org.rocksdb.Logger(dbOptions) {
                         @Override
