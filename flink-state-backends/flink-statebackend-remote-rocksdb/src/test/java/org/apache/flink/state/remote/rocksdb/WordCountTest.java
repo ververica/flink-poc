@@ -9,6 +9,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.contrib.streaming.state.RocksDBOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -52,6 +53,7 @@ public class WordCountTest {
         config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
         config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
+        config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/tmp-remote-test");
 
 //        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");

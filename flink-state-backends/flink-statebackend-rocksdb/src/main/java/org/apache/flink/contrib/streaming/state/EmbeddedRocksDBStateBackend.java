@@ -125,7 +125,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
      * configuration values will be used. The configuration defaults to the TaskManager's temp
      * directories.
      */
-    @Nullable private File[] localRocksDbDirectories;
+    @Nullable protected File[] localRocksDbDirectories;
 
     /** The pre-configured option settings. */
     @Nullable private PredefinedOptions predefinedOptions;
@@ -156,16 +156,16 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
     // -- runtime values, set on TaskManager when initializing / using the backend
 
     /** Base paths for RocksDB directory, as initialized. */
-    private transient File[] initializedDbBasePaths;
+    protected transient File[] initializedDbBasePaths;
 
     /** JobID for uniquifying backup paths. */
     protected transient JobID jobId;
 
     /** The index of the next directory to be used from {@link #initializedDbBasePaths}. */
-    private transient int nextDirectory;
+    protected transient int nextDirectory;
 
     /** Whether we already lazily initialized our local storage directories. */
-    private transient boolean isInitialized;
+    protected transient boolean isInitialized;
 
     /**
      * Max consumed memory size for one batch in {@link RocksDBWriteBatchWrapper}, default value

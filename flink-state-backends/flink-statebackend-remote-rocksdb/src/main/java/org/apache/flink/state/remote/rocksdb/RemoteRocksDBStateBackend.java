@@ -49,7 +49,11 @@ import javax.annotation.Nonnull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 
 @PublicEvolving
@@ -173,5 +177,28 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                         .setWriteBatchSize(getWriteBatchSize())
                         .setOverlapFractionThreshold(getOverlapFractionThreshold());
         return builder.build();
+    }
+
+    protected void lazyInitializeForJob(
+            Environment env, @SuppressWarnings("unused") String operatorIdentifier) {
+
+        if (isInitialized) {
+            return;
+        }
+
+        this.jobId = env.getJobID();
+
+        // initialize the paths where the local RocksDB files should be stored
+        if (localRocksDbDirectories == null) {
+            initializedDbBasePaths = new File[] {env.getTaskManagerInfo().getTmpWorkingDirectory()};
+        } else {
+            List<File> dirs = new ArrayList<>(localRocksDbDirectories.length);
+
+            Collections.addAll(dirs, localRocksDbDirectories);
+            initializedDbBasePaths = dirs.toArray(new File[0]);
+        }
+
+        nextDirectory = new Random().nextInt(initializedDbBasePaths.length);
+        isInitialized = true;
     }
 }
