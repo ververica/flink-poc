@@ -115,6 +115,12 @@ under the License.
 			<artifactId>flink-statebackend-rocksdb</artifactId>
 			<version>${project.version}</version>
 			<optional>${flink.markBundledAsOptional}</optional>
+			<exclusions>
+				<exclusion>
+					<groupId>com.ververica</groupId>
+					<artifactId>frocksdbjni</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<dependency>
