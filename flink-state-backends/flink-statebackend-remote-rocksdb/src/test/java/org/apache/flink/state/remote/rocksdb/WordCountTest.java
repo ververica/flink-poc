@@ -62,7 +62,7 @@ public class WordCountTest {
 
     @Test
     public void testWordCount() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(getConfiguration());
         DataStream<String> source = WordSource.getSource(env, 1000, 1000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);

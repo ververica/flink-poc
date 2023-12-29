@@ -382,6 +382,7 @@ public abstract class AbstractStreamOperator<OUT>
      *
      * @return The job's execution config.
      */
+    @Override
     public ExecutionConfig getExecutionConfig() {
         return container.getExecutionConfig();
     }

@@ -18,11 +18,13 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.CheckpointListener;
 import org.apache.flink.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.io.Serializable;
@@ -148,4 +150,8 @@ public interface StreamOperator<OUT> extends CheckpointListener, KeyContext, Ser
     OperatorMetricGroup getMetricGroup();
 
     OperatorID getOperatorID();
+
+    default ExecutionConfig getExecutionConfig() {
+        throw new UnsupportedOperationException();
+    }
 }

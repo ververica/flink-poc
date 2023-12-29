@@ -47,6 +47,8 @@ import org.apache.flink.util.ResourceGuard;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.RocksDB;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 
@@ -61,6 +63,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<K> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(RemoteRocksDBKeyedStateBackend.class);
 
     private RemoteRocksDBMode remoteRocksDBMode;
     private String workingDir;
@@ -130,6 +134,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         this.batchCacheStateConfig = new BatchCacheStateConfig(enableCacheLayer);
         ExecutorService executor = Executors.newFixedThreadPool(ioParallelism);
         this.batchParallelIOExecutor = new BatchParallelIOExecutor<>(executor);
+        LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
+                remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
     }
     
     RocksDB getDB() {

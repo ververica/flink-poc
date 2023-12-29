@@ -80,8 +80,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
         this.enableCacheLayer = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER);
         this.workingDir = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
         this.ioParallelism = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
-        LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}",
-                remoteRocksDBMode, enableCacheLayer, workingDir);
+        LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}, ioParallelism {}",
+                remoteRocksDBMode, enableCacheLayer, workingDir, ioParallelism);
     }
 
     @Override

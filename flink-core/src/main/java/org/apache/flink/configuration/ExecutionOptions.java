@@ -163,4 +163,12 @@ public class ExecutionOptions {
                                     + " operators. NOTE: It takes effect only in the BATCH runtime mode and requires sorted inputs"
                                     + SORT_INPUTS.key()
                                     + " to be enabled.");
+
+    @Documentation.ExcludeFromDocumentation(
+            "This is an expert option, that we do not want to expose in the documentation")
+    public static final ConfigOption<Integer> BUNDLE_OPERATOR_BATCH_SIZE =
+            ConfigOptions.key("execution.bundle.operator.batch.size")
+                    .intType()
+                    .defaultValue(1000)
+                    .withDescription("Batch size for bundle operator");
 }

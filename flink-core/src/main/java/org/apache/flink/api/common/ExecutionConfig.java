@@ -1001,6 +1001,14 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         configuration.set(ExecutionOptions.SNAPSHOT_COMPRESSION, useSnapshotCompression);
     }
 
+    public void setBundleOperatorBatchSize(int batchSize) {
+        configuration.set(ExecutionOptions.BUNDLE_OPERATOR_BATCH_SIZE, batchSize);
+    }
+
+    public int getBundleOperatorBatchSize() {
+        return configuration.get(ExecutionOptions.BUNDLE_OPERATOR_BATCH_SIZE);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ExecutionConfig) {
@@ -1219,6 +1227,10 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         configuration
                 .getOptional(JobManagerOptions.SCHEDULER)
                 .ifPresent(t -> this.configuration.set(JobManagerOptions.SCHEDULER, t));
+
+        configuration
+                .getOptional(ExecutionOptions.BUNDLE_OPERATOR_BATCH_SIZE)
+                .ifPresent(this::setBundleOperatorBatchSize);
     }
 
     /**

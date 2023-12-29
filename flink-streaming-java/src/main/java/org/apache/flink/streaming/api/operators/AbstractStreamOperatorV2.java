@@ -314,6 +314,7 @@ public abstract class AbstractStreamOperatorV2<OUT>
      *
      * @return The job's execution config.
      */
+    @Override
     public ExecutionConfig getExecutionConfig() {
         return executionConfig;
     }

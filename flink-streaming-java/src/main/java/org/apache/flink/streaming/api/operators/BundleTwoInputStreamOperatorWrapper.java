@@ -17,6 +17,7 @@
 
 package org.apache.flink.streaming.api.operators;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -27,11 +28,15 @@ import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 
 /** @param <OUT> */
 public class BundleTwoInputStreamOperatorWrapper<IN1, IN2, OUT> implements TwoInputStreamOperator<IN1, IN2, OUT> {
 
+    private static final Logger LOG = LoggerFactory.getLogger(BundleTwoInputStreamOperatorWrapper.class);
     TwoInputStreamOperator<IN1, IN2, OUT> wrapped;
 
     private transient BatchingContext batchingContext;
@@ -131,8 +136,10 @@ public class BundleTwoInputStreamOperatorWrapper<IN1, IN2, OUT> implements TwoIn
 
     @Override
     public void open() throws Exception {
+        int batchSize = getExecutionConfig().getBundleOperatorBatchSize();
         batchingContext = new BatchingContext(1000);
         wrapped.open();
+        LOG.info("Open BundleTwoInputStreamOperatorWrapper with batchSize {}", batchSize);
     }
 
     @Override
@@ -186,6 +193,11 @@ public class BundleTwoInputStreamOperatorWrapper<IN1, IN2, OUT> implements TwoIn
     @Override
     public OperatorID getOperatorID() {
         return wrapped.getOperatorID();
+    }
+
+    @Override
+    public ExecutionConfig getExecutionConfig()  {
+        return wrapped.getExecutionConfig();
     }
 
     private class BatchingContext {

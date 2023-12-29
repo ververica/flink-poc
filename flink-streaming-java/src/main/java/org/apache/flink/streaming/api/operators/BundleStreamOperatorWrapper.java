@@ -17,6 +17,7 @@
 
 package org.apache.flink.streaming.api.operators;
 
+import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.jobgraph.OperatorID;
@@ -25,6 +26,9 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +39,8 @@ import java.util.Map;
 
 /** @param <OUT> */
 public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOperator<IN, OUT> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(BundleStreamOperatorWrapper.class);
 
     OneInputStreamOperator<IN, OUT> wrapped;
 
@@ -116,8 +122,10 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
 
     @Override
     public void open() throws Exception {
-        batchingContext = new BatchingContext(1000);
+        int batchSize = getExecutionConfig().getBundleOperatorBatchSize();
+        batchingContext = new BatchingContext(batchSize);
         wrapped.open();
+        LOG.info("Open BundleStreamOperatorWrapper with batch size {}", batchSize);
     }
 
     @Override
@@ -171,6 +179,11 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
     @Override
     public OperatorID getOperatorID() {
         return wrapped.getOperatorID();
+    }
+
+    @Override
+    public ExecutionConfig getExecutionConfig()  {
+        return wrapped.getExecutionConfig();
     }
 
     private class BatchingContext {
