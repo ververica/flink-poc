@@ -19,6 +19,7 @@
 package org.apache.flink.state.remote.rocksdb.fs;
 
 import org.apache.flink.core.fs.FSDataOutputStream;
+import org.apache.flink.core.fs.Path;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,9 +29,11 @@ import java.nio.ByteBuffer;
  */
 public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
 
+    private final Path path;
     private final FSDataOutputStream fsdos;
 
-    public ByteBufferWritableFSDataOutputStream(FSDataOutputStream fsdos) {
+    public ByteBufferWritableFSDataOutputStream(Path path, FSDataOutputStream fsdos) {
+        this.path = path;
         this.fsdos = fsdos;
     }
 
@@ -71,6 +74,9 @@ public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
     @Override
     public void sync() throws IOException {
         fsdos.sync();
+        if (!path.getName().startsWith("MANIFEST")) {
+            fsdos.close();
+        }
     }
 
     @Override

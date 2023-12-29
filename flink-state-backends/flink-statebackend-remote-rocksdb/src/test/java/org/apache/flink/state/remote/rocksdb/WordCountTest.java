@@ -9,12 +9,14 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 
+import org.apache.flink.testutils.oss.OSSTestCredentials;
 import org.apache.flink.util.Collector;
 
 import org.junit.ClassRule;
@@ -38,11 +40,19 @@ public class WordCountTest {
 
     private static Configuration getConfiguration() {
         Configuration config = new Configuration();
+        OSSTestCredentials.assumeCredentialsAvailable();
+        config.setString("fs.oss.endpoint", OSSTestCredentials.getOSSEndpoint());
+        config.setString("fs.oss.accessKeyId", OSSTestCredentials.getOSSAccessKey());
+        config.setString("fs.oss.accessKeySecret", OSSTestCredentials.getOSSSecretKey());
+        FileSystem.initialize(config, null);
+
         config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("1m"));
         config.set(StateBackendOptions.STATE_BACKEND,
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
         config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://localhost:9000");
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
+//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
+
 //        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
         return config;

@@ -65,6 +65,9 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
     public int read(ByteBuffer bb) throws IOException {
         byte[] tmp = new byte[bb.remaining()];
         int read = fsdis.read(tmp, 0, tmp.length);
+        if (read == -1) {
+            return -1;
+        }
         bb.put(tmp, 0, read);
         return read;
     }

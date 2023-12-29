@@ -106,17 +106,26 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     }
 
     public ByteBufferWritableFSDataOutputStream create(Path f) throws IOException {
-        return create(f, WriteMode.NO_OVERWRITE);
+        return create(f, WriteMode.OVERWRITE);
     }
 
     @Override
     public ByteBufferWritableFSDataOutputStream create(Path f, WriteMode overwriteMode) throws IOException {
         FSDataOutputStream original = flinkFS.create(f, overwriteMode);
-        return new ByteBufferWritableFSDataOutputStream(original);
+        return new ByteBufferWritableFSDataOutputStream(f, original);
     }
 
     @Override
     public boolean rename(Path src, Path dst) throws IOException {
+        // The rename is not atomic for RocksDB. Some FileSystems e.g. HDFS, OSS does not allow a
+        // renaming if the target already exists. So, we delete the target before attempting the
+        // rename.
+        if (flinkFS.exists(dst)) {
+            boolean deleted = flinkFS.delete(dst, false);
+            if (!deleted) {
+                throw new IOException("Fail to delete dst path: " + dst);
+            }
+        }
         return flinkFS.rename(src, dst);
     }
 
