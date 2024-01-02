@@ -16,29 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.flink.state.remote.rocksdb.fs;
+package org.apache.flink.state.remote.rocksdb.fs.cache;
 
 import org.apache.flink.core.fs.FSDataOutputStream;
-import org.apache.flink.core.fs.Path;
-import org.apache.flink.state.remote.rocksdb.fs.cache.CachedDataOutputStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-/**
- * ByteBufferWritableFSDataOutputStream.
- */
-public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
+public class CachedDataOutputStream extends FSDataOutputStream {
 
-    private final Path path;
-    private final FSDataOutputStream fsdos;
+    private final FileBasedCache.CacheEntry cacheEntry;
+    private FSDataOutputStream fsdos;
 
-    private final CachedDataOutputStream cachedDataOutputStream;
-
-    public ByteBufferWritableFSDataOutputStream(Path path, FSDataOutputStream fsdos, CachedDataOutputStream cachedDataOutputStream) {
-        this.path = path;
-        this.fsdos = fsdos;
-        this.cachedDataOutputStream = cachedDataOutputStream;
+    public CachedDataOutputStream(FileBasedCache.CacheEntry cacheEntry) throws IOException {
+        this.cacheEntry = cacheEntry;
+        this.fsdos = cacheEntry.open4Write();
     }
 
     @Override
@@ -49,24 +41,15 @@ public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
     @Override
     public void write(int b) throws IOException {
         fsdos.write(b);
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.write(b);
-        }
     }
 
     public void write(byte[] b) throws IOException {
         fsdos.write(b);
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.write(b);
-        }
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         fsdos.write(b, off, len);
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.write(b, off, len);
-        }
     }
 
     public void write(ByteBuffer bb) throws IOException {
@@ -82,27 +65,16 @@ public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
     @Override
     public void flush() throws IOException {
         fsdos.flush();
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.flush();
-        }
     }
 
     @Override
     public void sync() throws IOException {
         fsdos.sync();
-        if (!path.getName().startsWith("MANIFEST")) {
-            fsdos.close();
-        }
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.sync();
-        }
     }
 
     @Override
     public void close() throws IOException {
-        fsdos.close();
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.close();
-        }
+        cacheEntry.close4Write();
     }
+
 }

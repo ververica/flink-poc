@@ -16,139 +16,122 @@
  * limitations under the License.
  */
 
-package org.apache.flink.state.remote.rocksdb.fs;
+package org.apache.flink.state.remote.rocksdb.fs.cache;
 
 import org.apache.flink.core.fs.FSDataInputStream;
-import org.apache.flink.state.remote.rocksdb.fs.cache.CachedDataInputStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-/**
- * ByteBufferReadableFSDataInputStream.
- */
-public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
-
-    private final FSDataInputStream fsdis;
-
-    private volatile CachedDataInputStream cachedDataInputStream;
+public class CachedDataInputStream extends FSDataInputStream {
+    
+    private final FileBasedCache.CacheEntry cacheEntry;
 
     private final Object lock;
+    
+    private volatile FSDataInputStream fsdis;
 
-    private volatile long toSeek = -1L;
-
-    public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis, CachedDataInputStream cachedDataInputStream) {
-        this.fsdis = fsdis;
-        this.cachedDataInputStream = cachedDataInputStream;
+    public CachedDataInputStream(FileBasedCache.CacheEntry cacheEntry) {
+        this.cacheEntry = cacheEntry;
         this.lock = new Object();
     }
-
-    private void seedIfNeeded() throws IOException {
-        if (toSeek >= 0) {
-            fsdis.seek(toSeek);
-            toSeek = -1L;
+    
+    private FSDataInputStream getStream() throws IOException {
+        if (fsdis == null) {
+            fsdis = cacheEntry.open4Read();
         }
+        return fsdis;
+    }
+
+    private void closeStream() throws IOException {
+        if (fsdis != null) {
+            cacheEntry.close4Read();
+            fsdis = null;
+        }
+    }
+    
+    public boolean isAvailable() throws IOException {
+        return getStream() != null;
     }
 
     @Override
     public void seek(long desired) throws IOException {
-        if (cachedDataInputStream != null) {
-            if (cachedDataInputStream.isAvailable()) {
-                cachedDataInputStream.seek(desired);
-            } else {
-                cachedDataInputStream = null;
-            }
-        }
-        toSeek = desired;
+        getStream().seek(desired);
     }
 
     @Override
     public long getPos() throws IOException {
-        if (toSeek >= 0) {
-            return toSeek;
-        }
-        return fsdis.getPos();
+        return getStream().getPos();
     }
 
     @Override
     public int read() throws IOException {
-        seedIfNeeded();
-        return fsdis.read();
+        return getStream().read();
     }
 
     @Override
     public int read(byte[] b) throws IOException {
-        seedIfNeeded();
-        return fsdis.read(b);
+        return getStream().read(b);
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        seedIfNeeded();
-        return fsdis.read(b, off, len);
+        return getStream().read(b, off, len);
     }
 
     public int read(ByteBuffer bb) throws IOException {
-        if (cachedDataInputStream != null) {
-            if (cachedDataInputStream.isAvailable()) {
-                if (toSeek < 0) {
-                    toSeek = fsdis.getPos();
-                }
-                toSeek += bb.remaining();
-                int ret = cachedDataInputStream.read(bb);
-                return ret;
-            } else {
-                cachedDataInputStream = null;
-            }
-        }
-        seedIfNeeded();
         byte[] tmp = new byte[bb.remaining()];
-        int read = fsdis.read(tmp, 0, tmp.length);
+        int read = getStream().read(tmp, 0, tmp.length);
         if (read == -1) {
             return -1;
         }
         bb.put(tmp, 0, read);
+        closeStream();
         return read;
     }
 
     public int read(long position, ByteBuffer bb) throws IOException {
         synchronized (lock) {
-            seek(position);
+            getStream().seek(position);
             return read(bb);
         }
     }
 
     @Override
     public long skip(long n) throws IOException {
-        seek(getPos() + n);
-        return getPos();
+        return getStream().skip(n);
     }
 
     @Override
     public int available() throws IOException {
-        seedIfNeeded();
-        return fsdis.available();
+        return getStream().available();
     }
 
     @Override
     public void close() throws IOException {
-        fsdis.close();
+        getStream().close();
     }
 
     @Override
     public synchronized void mark(int readlimit) {
-        fsdis.mark(readlimit);
+        try {
+            getStream().mark(readlimit);
+        } catch (Exception e) {
+        }
     }
 
     @Override
     public synchronized void reset() throws IOException {
-        toSeek = -1L;
-        fsdis.reset();
+        getStream().reset();
     }
 
     @Override
     public boolean markSupported() {
-        return fsdis.markSupported();
+        try {
+            return getStream().markSupported();
+        } catch (Exception e) {
+        }
+        return false;
     }
-
+    
 }

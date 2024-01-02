@@ -28,6 +28,7 @@ import org.apache.flink.contrib.streaming.state.RocksDBOperationUtils;
 import org.apache.flink.contrib.streaming.state.RocksDBResourceContainer;
 import org.apache.flink.contrib.streaming.state.RocksDBSharedResources;
 import org.apache.flink.core.fs.CloseableRegistry;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.memory.OpaqueMemoryResource;
@@ -41,6 +42,8 @@ import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 
 import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
+
+import org.apache.flink.state.remote.rocksdb.fs.RemoteRocksdbFlinkFileSystem;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +83,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
         this.enableCacheLayer = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER);
         this.workingDir = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
         this.ioParallelism = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
+        RemoteRocksdbFlinkFileSystem.configureCacheTtl(config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_LIVE_MILLS));
         LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}, ioParallelism {}",
                 remoteRocksDBMode, enableCacheLayer, workingDir, ioParallelism);
     }
@@ -108,6 +112,12 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
         // we do this explicitly here to have better error handling
         String tempDir = env.getTaskManagerInfo().getTmpWorkingDirectory().getAbsolutePath();
         ensureRocksDBIsLoaded(tempDir);
+
+        Path tempCachePath =
+                new Path(tempDir,
+                        "rocksdb_dfs_cache");
+
+        RemoteRocksdbFlinkFileSystem.configureCacheBase(tempCachePath);
 
         // replace all characters that are not legal for filenames with underscore
         String fileCompatibleIdentifier = operatorIdentifier.replaceAll("[^a-zA-Z0-9\\-]", "_");

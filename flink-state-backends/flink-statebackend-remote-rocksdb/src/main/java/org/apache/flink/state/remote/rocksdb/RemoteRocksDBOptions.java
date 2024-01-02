@@ -51,4 +51,10 @@ public class RemoteRocksDBOptions {
                     .intType()
                     .defaultValue(16)
                     .withDescription("");
+
+    public static final ConfigOption<Long> REMOTE_ROCKSDB_FS_CACHE_LIVE_MILLS =
+            ConfigOptions.key("state.backend.remote-rocksdb.fs-cache.ttl")
+                    .longType()
+                    .defaultValue(60000L)
+                    .withDescription("");
 }

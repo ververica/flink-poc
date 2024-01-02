@@ -25,24 +25,45 @@ import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystemKind;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.core.fs.local.LocalFileSystem;
+import org.apache.flink.state.remote.rocksdb.fs.cache.FileBasedCache;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.UUID;
 
 /**
  * RemoteRocksdbFlinkFileSystem, used to expose flink fileSystem interface to frocksdb.
  */
 public class RemoteRocksdbFlinkFileSystem extends FileSystem {
 
+    private static Path cacheBase = null;
+
+    private static long cacheTtl = 0L;
+
     private final FileSystem flinkFS;
 
-    public RemoteRocksdbFlinkFileSystem(FileSystem flinkFS) {
+    private final FileBasedCache fileBasedCache;
+
+    public RemoteRocksdbFlinkFileSystem(FileSystem flinkFS, FileBasedCache fileBasedCache) {
         this.flinkFS = flinkFS;
+        this.fileBasedCache = fileBasedCache;
     }
 
+    public static void configureCacheBase(Path path) {
+        cacheBase = path;
+    }
+
+    public static void configureCacheTtl(long ttl) {
+        cacheTtl = ttl;
+    }
 
     public static FileSystem get(URI uri) throws IOException {
-        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri));
+        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl));
+    }
+
+    private static Path childCacheBase(Path base) {
+        return new Path(base, UUID.randomUUID().toString());
     }
 
     @Override
@@ -76,13 +97,13 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     @Override
     public ByteBufferReadableFSDataInputStream open(Path f, int bufferSize) throws IOException {
         FSDataInputStream original = flinkFS.open(f, bufferSize);
-        return new ByteBufferReadableFSDataInputStream(original);
+        return new ByteBufferReadableFSDataInputStream(original, fileBasedCache == null ? null : fileBasedCache.open4Read(f));
     }
 
     @Override
     public ByteBufferReadableFSDataInputStream open(Path f) throws IOException {
         FSDataInputStream original = flinkFS.open(f);
-        return new ByteBufferReadableFSDataInputStream(original);
+        return new ByteBufferReadableFSDataInputStream(original, fileBasedCache == null ? null : fileBasedCache.open4Read(f));
     }
 
     @Override
@@ -112,7 +133,7 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     @Override
     public ByteBufferWritableFSDataOutputStream create(Path f, WriteMode overwriteMode) throws IOException {
         FSDataOutputStream original = flinkFS.create(f, overwriteMode);
-        return new ByteBufferWritableFSDataOutputStream(f, original);
+        return new ByteBufferWritableFSDataOutputStream(f, original, fileBasedCache == null ? null : fileBasedCache.open4Write(f));
     }
 
     @Override

@@ -21,6 +21,8 @@ package org.apache.flink.state.remote.rocksdb.fs;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.local.LocalFileSystem;
 
+import org.apache.flink.state.remote.rocksdb.fs.cache.FileBasedCache;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -34,7 +36,8 @@ public class RemoteRocksdbFlinkFileSystemTest {
     @Test
     public void testByteBufferInputStreamAndOutputStream() throws Exception {
         LocalFileSystem fileSystem = new LocalFileSystem();
-        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem);
+        Path testFilePathForCache = new Path("/tmp", "cache");
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000));
         Path testFilePath = new Path("/tmp", "test-1");
         ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
         ByteBuffer writeBuffer = ByteBuffer.allocate(20);
@@ -50,27 +53,45 @@ public class RemoteRocksdbFlinkFileSystemTest {
         outputStream.flush();
         outputStream.close();
 
-        ByteBufferReadableFSDataInputStream inputStream = remoteRocksdbFlinkFileSystem.open(testFilePath);
-        ByteBuffer readBuffer = ByteBuffer.allocate(20);
-        for (int i = 0; i < 200; i++) {
-            readBuffer.clear();
-            readBuffer.position(1);
-            readBuffer.limit(17);
-            int read = inputStream.read(readBuffer);
-            Assert.assertEquals(16, read);
-            Assert.assertEquals(i, readBuffer.getLong(1));
-            Assert.assertEquals(i * 2, readBuffer.getLong(9));
+
+        // file and cache are same
+        byte[] writeBuffer1 = new byte[4000];
+        byte[] writeBuffer2 = new byte[4000];
+        fileSystem.open(new Path("/tmp/cache/test-1")).read(writeBuffer1);
+        fileSystem.open(new Path("/tmp/test-1")).read(writeBuffer2);
+        for (int i = 0; i < 4000; i++) {
+            Assert.assertEquals(String.format("%d byte should be the same", i), writeBuffer2[i], writeBuffer1[i]);
         }
 
-        for (int i = 0; i < 200; i +=2) {
-            readBuffer.clear();
-            readBuffer.position(1);
-            readBuffer.limit(17);
-            int read = inputStream.read(i * 16L, readBuffer);
-            Assert.assertEquals(16, read);
-            Assert.assertEquals(i, readBuffer.getLong(1));
-            Assert.assertEquals(i * 2, readBuffer.getLong(9));
+        Thread.sleep(2800);
+
+        ByteBufferReadableFSDataInputStream inputStream = remoteRocksdbFlinkFileSystem.open(
+                testFilePath);
+
+        for (int k = 0; k < 10000; k++) {
+            inputStream.seek(0);
+            ByteBuffer readBuffer = ByteBuffer.allocate(20);
+            for (int i = 0; i < 200; i++) {
+                readBuffer.clear();
+                readBuffer.position(1);
+                readBuffer.limit(17);
+                int read = inputStream.read(readBuffer);
+                Assert.assertEquals(16, read);
+                Assert.assertEquals(i, readBuffer.getLong(1));
+                Assert.assertEquals(i * 2, readBuffer.getLong(9));
+            }
+
+            for (int i = 0; i < 200; i += 2) {
+                readBuffer.clear();
+                readBuffer.position(1);
+                readBuffer.limit(17);
+                int read = inputStream.read(i * 16L, readBuffer);
+                Assert.assertEquals(16, read);
+                Assert.assertEquals(i, readBuffer.getLong(1));
+                Assert.assertEquals(i * 2, readBuffer.getLong(9));
+            }
         }
+        Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(new Path("/tmp/cache/test-1")));
         inputStream.close();
         remoteRocksdbFlinkFileSystem.delete(testFilePath, true);
         Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(testFilePath));
