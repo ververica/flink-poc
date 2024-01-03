@@ -90,7 +90,7 @@ public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
     @Override
     public void sync() throws IOException {
         fsdos.sync();
-        if (!path.getName().startsWith("MANIFEST")) {
+        if (!path.getName().startsWith("MANIFEST") && path.toUri().getScheme().equals("oss")) {
             fsdos.close();
         }
         if (cachedDataOutputStream != null) {

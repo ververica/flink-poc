@@ -2,6 +2,8 @@ package org.apache.flink.state.remote.rocksdb;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.core.fs.Path;
+import org.apache.flink.state.remote.rocksdb.fs.RemoteRocksdbFlinkFileSystem;
 import org.apache.flink.testutils.oss.OSSTestCredentials;
 
 import org.junit.Assert;
@@ -57,6 +59,7 @@ public class FlinkEnvTest {
     }
 
     private void testAccess(String remoteDir) throws RocksDBException {
+        RemoteRocksdbFlinkFileSystem.configureCacheBase(new Path("/tmp/local-cache"));
         try (final Env env = new FlinkEnv(remoteDir);
              final Options options = new Options();
              final Options newOptions = options.setCreateIfMissing(true).setUseFsync(false)
