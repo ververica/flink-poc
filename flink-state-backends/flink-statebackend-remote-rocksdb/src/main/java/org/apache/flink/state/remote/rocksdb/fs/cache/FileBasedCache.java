@@ -49,29 +49,45 @@ public class FileBasedCache implements Closeable {
 
     private final ScheduledExecutorService timeTickService;
 
+    private volatile boolean closed;
 
-    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl) {
+
+    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout) {
         this.cacheFs = flinkFs;
         this.basePath = basePath;
         this.cacheTtl = cacheTtl;
         this.cacheMap = new ConcurrentHashMap<>();
         ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("CacheDeleteTickTimeService-%d").build();
         this.timeTickService = new ScheduledThreadPoolExecutor(1, threadFactory);
-        LOG.info("Local cache initialized at {}.", basePath);
+        this.closed = false;
+        scheduleClose(timeout);
+        LOG.info("Local fs-cache initialized at {}.", basePath);
     }
 
     @Override
-    public void close() throws IOException {
-        timeTickService.shutdownNow();
+    public synchronized void close() {
+        if (!closed) {
+            closed = true;
+            timeTickService.shutdownNow();
+            cacheMap.values().forEach(CacheEntry::invalidate);
+            LOG.info("Local fs-cache closed");
+        }
     }
 
     void scheduleDelete(CacheEntry e) {
-        timeTickService.schedule(() -> {
-            e.release();
-        }, cacheTtl, TimeUnit.MILLISECONDS);
+        timeTickService.schedule(e::invalidate, cacheTtl, TimeUnit.MILLISECONDS);
+    }
+
+    void scheduleClose(long timeout) {
+        if (timeout > 0L) {
+            timeTickService.schedule(this::close, timeout, TimeUnit.MILLISECONDS);
+        }
     }
 
     public CachedDataInputStream open4Read(Path path) throws IOException {
+        if (closed) {
+            return null;
+        }
         CacheEntry entry = cacheMap.get(path);
         if (entry != null) {
             return new CachedDataInputStream(entry);
@@ -81,6 +97,9 @@ public class FileBasedCache implements Closeable {
     }
 
     public CachedDataOutputStream open4Write(Path path) throws IOException {
+        if (closed) {
+            return null;
+        }
         CacheEntry entry = new CacheEntry(path, getCachePath(path));
         cacheMap.put(path, entry);
         return new CachedDataOutputStream(entry);
@@ -102,11 +121,14 @@ public class FileBasedCache implements Closeable {
 
         private volatile boolean writing;
 
+        private volatile boolean closed;
+
         CacheEntry(Path originalPath, Path cachePath) {
             super(1);
             this.originalPath = originalPath;
             this.cachePath = cachePath;
             this.writing = true;
+            this.closed = false;
         }
 
         FSDataInputStream open4Read() throws IOException {
@@ -139,6 +161,13 @@ public class FileBasedCache implements Closeable {
 
         public void close4Read() {
             release();
+        }
+
+        public synchronized void invalidate() {
+            if (!closed) {
+                closed = true;
+                release();
+            }
         }
 
         @Override

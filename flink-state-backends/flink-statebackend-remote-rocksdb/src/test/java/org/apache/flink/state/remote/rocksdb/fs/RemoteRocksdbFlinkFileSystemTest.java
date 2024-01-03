@@ -43,7 +43,7 @@ public class RemoteRocksdbFlinkFileSystemTest {
     public void testByteBufferInputStreamAndOutputStream() throws Exception {
         LocalFileSystem fileSystem = new LocalFileSystem();
         Path testFilePathForCache = new Path("/tmp", "cache");
-        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000));
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L));
         Path testFilePath = new Path("/tmp", "test-1");
         ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
         ByteBuffer writeBuffer = ByteBuffer.allocate(20);
