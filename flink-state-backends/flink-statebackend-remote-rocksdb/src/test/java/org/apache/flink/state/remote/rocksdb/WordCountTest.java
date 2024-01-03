@@ -9,6 +9,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
+import org.apache.flink.contrib.streaming.state.RocksDBConfigurableOptions;
 import org.apache.flink.contrib.streaming.state.RocksDBOptions;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
@@ -48,11 +49,13 @@ public class WordCountTest {
         FileSystem.initialize(config, null);
 
         config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("1m"));
+        config.set(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE, MemorySize.parse("1m"));
         config.set(StateBackendOptions.STATE_BACKEND,
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
         config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
         config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
+//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
         config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/tmp-remote-test");
 
 //        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
@@ -63,7 +66,7 @@ public class WordCountTest {
     @Test
     public void testWordCount() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(getConfiguration());
-        DataStream<String> source = WordSource.getSource(env, 1000, 1000, 50).setParallelism(1);
+        DataStream<String> source = WordSource.getSource(env, 1000, 100000000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();

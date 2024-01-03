@@ -54,8 +54,9 @@ public class FlinkEnvTest {
         final Configuration conf = new Configuration();
         initOSS(conf);
         FileSystem.initialize(conf, null);
-        testAccess("oss://state-oss-test");
-        testAccess("file:///test-dir");
+        testAccess("hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000");
+//        testAccess("oss://state-oss-test");
+//        testAccess("file:///test-dir");
     }
 
     private void testAccess(String remoteDir) throws RocksDBException {

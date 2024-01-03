@@ -311,7 +311,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         DBOptions dbOptions = optionsContainer.getDbOptions();
         if (remoteRocksDBMode == RemoteRocksDBMode.REMOTE) {
             dbOptions.setCreateIfMissing(true)
-                    .setEnv(new FlinkEnv(workingDir + instanceRocksDBPath))
+                    .setEnv(new FlinkEnv(workingDir))
                     .setDbLogDir(".")
                     .setLogger(new org.rocksdb.Logger(dbOptions) {
                         @Override
