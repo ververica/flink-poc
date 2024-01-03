@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.fs.hdfs;
 
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.core.fs.PositionedReadable;
 
 import javax.annotation.Nonnull;
 
@@ -30,7 +31,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * Concrete implementation of the {@link FSDataInputStream} for Hadoop's input streams. This
  * supports all file systems supported by Hadoop, such as HDFS and S3 (S3a/S3n).
  */
-public final class HadoopDataInputStream extends FSDataInputStream {
+public final class HadoopDataInputStream extends FSDataInputStream implements PositionedReadable {
 
     /**
      * Minimum amount of bytes to skip forward before we issue a seek instead of discarding read.
@@ -139,5 +140,20 @@ public final class HadoopDataInputStream extends FSDataInputStream {
         while (bytes > 0) {
             bytes -= fsDataInputStream.skip(bytes);
         }
+    }
+
+    @Override
+    public int read(long position, byte[] buffer, int offset, int length) throws IOException {
+        return fsDataInputStream.read(position, buffer, offset, length);
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer, int offset, int length) throws IOException {
+        fsDataInputStream.readFully(position, buffer, offset, length);
+    }
+
+    @Override
+    public void readFully(long position, byte[] buffer) throws IOException {
+        fsDataInputStream.readFully(position, buffer);
     }
 }
