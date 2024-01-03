@@ -41,6 +41,8 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
 
     private static long cacheTtl = 0L;
 
+    private static long cacheTimeout = 0L;
+
     private final FileSystem flinkFS;
 
     private final FileBasedCache fileBasedCache;
@@ -54,12 +56,13 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
         cacheBase = path;
     }
 
-    public static void configureCacheTtl(long ttl) {
+    public static void configureCacheTtl(long ttl, long timeout) {
         cacheTtl = ttl;
+        cacheTimeout = timeout;
     }
 
     public static FileSystem get(URI uri) throws IOException {
-        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl));
+        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout));
     }
 
     private static Path childCacheBase(Path base) {
