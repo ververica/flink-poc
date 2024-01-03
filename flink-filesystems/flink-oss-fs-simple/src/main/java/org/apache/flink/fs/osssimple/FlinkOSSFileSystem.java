@@ -106,6 +106,8 @@ public class FlinkOSSFileSystem extends FileSystem {
 
     private int blockOutputActiveBlocks;
 
+    private final FileStatusCache fileStatusCache = new FileStatusCache((k) -> k.endsWith("sst"));
+
     FlinkOSSFileSystem(URI name, Configuration conf) throws IOException {
         this.bucket = name.getHost();
         this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
@@ -215,6 +217,12 @@ public class FlinkOSSFileSystem extends FileSystem {
         Path qualifiedPath = makeQualified(f, uri, workingDir);
         String key = pathToKey(qualifiedPath);
 
+        // hack for cache
+        FileStatus fs = fileStatusCache.getFileStatus(key);
+        if (fs != null) {
+            return fs;
+        }
+
         // Root always exists
         if (key.length() == 0) {
             return new OSSFileStatus(0, true, 1, 0, 0, qualifiedPath, username);
@@ -246,9 +254,11 @@ public class FlinkOSSFileSystem extends FileSystem {
             return new OSSFileStatus(0, true, 1, 0, meta.getLastModified().getTime(),
                     qualifiedPath, username);
         } else {
-            return new OSSFileStatus(meta.getContentLength(), false, 1,
+            fs = new OSSFileStatus(meta.getContentLength(), false, 1,
                     32 * 1024 * 1024, meta.getLastModified().getTime(),
                     qualifiedPath, username);
+            fileStatusCache.addFile(key, fs);
+            return fs;
         }
     }
 
@@ -685,6 +695,7 @@ public class FlinkOSSFileSystem extends FileSystem {
     }
 
     public void deleteObject(String key) {
+        fileStatusCache.deleteFile(key);
         ossClient.deleteObject(bucket, key);
     }
 
