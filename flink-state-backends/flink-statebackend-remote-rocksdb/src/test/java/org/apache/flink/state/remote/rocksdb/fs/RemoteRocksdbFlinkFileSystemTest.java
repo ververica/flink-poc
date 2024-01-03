@@ -75,7 +75,7 @@ public class RemoteRocksdbFlinkFileSystemTest {
                 readBuffer.clear();
                 readBuffer.position(1);
                 readBuffer.limit(17);
-                int read = inputStream.read(readBuffer);
+                int read = inputStream.readFully(readBuffer);
                 Assert.assertEquals(16, read);
                 Assert.assertEquals(i, readBuffer.getLong(1));
                 Assert.assertEquals(i * 2, readBuffer.getLong(9));
@@ -85,7 +85,7 @@ public class RemoteRocksdbFlinkFileSystemTest {
                 readBuffer.clear();
                 readBuffer.position(1);
                 readBuffer.limit(17);
-                int read = inputStream.read(i * 16L, readBuffer);
+                int read = inputStream.readFully(i * 16L, readBuffer);
                 Assert.assertEquals(16, read);
                 Assert.assertEquals(i, readBuffer.getLong(1));
                 Assert.assertEquals(i * 2, readBuffer.getLong(9));

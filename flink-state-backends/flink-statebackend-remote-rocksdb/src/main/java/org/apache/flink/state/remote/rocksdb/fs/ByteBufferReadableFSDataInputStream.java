@@ -88,14 +88,17 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         return fsdis.read(b, off, len);
     }
 
-    public int read(ByteBuffer bb) throws IOException {
+    /**
+     * Return the total number of bytes read into the buffer.
+     */
+    public int readFully(ByteBuffer bb) throws IOException {
         if (cachedDataInputStream != null) {
             if (cachedDataInputStream.isAvailable()) {
                 if (toSeek < 0) {
                     toSeek = fsdis.getPos();
                 }
                 toSeek += bb.remaining();
-                int ret = cachedDataInputStream.read(bb);
+                int ret = cachedDataInputStream.readFully(bb);
                 return ret;
             } else {
                 cachedDataInputStream = null;
@@ -103,18 +106,27 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         }
         seedIfNeeded();
         byte[] tmp = new byte[bb.remaining()];
-        int read = fsdis.read(tmp, 0, tmp.length);
-        if (read == -1) {
-            return -1;
+        int n = 0;
+        while (n < tmp.length) {
+            int read = fsdis.read(tmp, n, tmp.length - n);
+            if (read == -1) {
+                break;
+            }
+            n += read;
         }
-        bb.put(tmp, 0, read);
-        return read;
+        if (n > 0) {
+            bb.put(tmp, 0, n);
+        }
+        return n;
     }
 
-    public int read(long position, ByteBuffer bb) throws IOException {
+    /**
+     * Return the total number of bytes read into the buffer.
+     */
+    public int readFully(long position, ByteBuffer bb) throws IOException {
         synchronized (lock) {
             seek(position);
-            return read(bb);
+            return readFully(bb);
         }
     }
 

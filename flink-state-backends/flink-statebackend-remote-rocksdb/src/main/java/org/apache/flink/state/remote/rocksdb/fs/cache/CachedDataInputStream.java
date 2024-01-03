@@ -79,21 +79,27 @@ public class CachedDataInputStream extends FSDataInputStream {
         return getStream().read(b, off, len);
     }
 
-    public int read(ByteBuffer bb) throws IOException {
+    public int readFully(ByteBuffer bb) throws IOException {
         byte[] tmp = new byte[bb.remaining()];
-        int read = getStream().read(tmp, 0, tmp.length);
-        if (read == -1) {
-            return -1;
+        int n = 0;
+        while (n < tmp.length) {
+            int read = getStream().read(tmp, n, tmp.length - n);
+            if (read == -1) {
+                break;
+            }
+            n += read;
         }
-        bb.put(tmp, 0, read);
+        if (n > 0) {
+            bb.put(tmp, 0, n);
+        }
         closeStream();
-        return read;
+        return n;
     }
 
-    public int read(long position, ByteBuffer bb) throws IOException {
+    public int readFully(long position, ByteBuffer bb) throws IOException {
         synchronized (lock) {
             getStream().seek(position);
-            return read(bb);
+            return readFully(bb);
         }
     }
 
