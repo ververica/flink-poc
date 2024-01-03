@@ -346,7 +346,9 @@ public abstract class FileSystem {
 
                 FileSystemFactory fsf =
                         ConnectionLimitingFactory.decorateIfLimited(factory, scheme, config);
-                FS_FACTORIES.put(scheme, fsf);
+                if (!scheme.equals("oss") || !FS_FACTORIES.containsKey(scheme) || FS_FACTORIES.get(scheme).getClass().getCanonicalName().contains("osshadoop")) {
+                    FS_FACTORIES.put(scheme, fsf);
+                }
             }
 
             // configure the default (fallback) factory
