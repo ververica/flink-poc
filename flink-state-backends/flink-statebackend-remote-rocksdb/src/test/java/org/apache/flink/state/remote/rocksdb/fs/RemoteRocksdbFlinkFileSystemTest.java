@@ -23,10 +23,16 @@ import org.apache.flink.core.fs.local.LocalFileSystem;
 
 import org.apache.flink.state.remote.rocksdb.fs.cache.FileBasedCache;
 
+import org.apache.flink.util.concurrent.FutureUtils;
+
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 /**
  * RemoteRocksdbFlinkFileSystemTest.
@@ -92,6 +98,52 @@ public class RemoteRocksdbFlinkFileSystemTest {
             }
         }
         Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(new Path("/tmp/cache/test-1")));
+        inputStream.close();
+        remoteRocksdbFlinkFileSystem.delete(testFilePath, true);
+        Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(testFilePath));
+    }
+
+    @Test
+    public void testConcurrentPositionRead() throws Exception {
+        LocalFileSystem fileSystem = new LocalFileSystem();
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, null);
+        Path testFilePath = new Path("/tmp", "test-2");
+        ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
+        ByteBuffer writeBuffer = ByteBuffer.allocate(20);
+        for (int i = 0; i < 200; i++) {
+            writeBuffer.clear();
+            writeBuffer.position(2);
+            writeBuffer.putLong(i);
+            writeBuffer.putLong(i * 2);
+            writeBuffer.flip();
+            writeBuffer.position(2);
+            outputStream.write(writeBuffer);
+        }
+        outputStream.flush();
+        outputStream.close();
+
+        ByteBufferReadableFSDataInputStream inputStream = remoteRocksdbFlinkFileSystem.open(
+                testFilePath);
+        List<CompletableFuture<Void>> futureList = new ArrayList<>();
+        for (int index = 0; index < 40; index++) {
+            futureList.add(CompletableFuture.runAsync(() -> {
+                try {
+                    ByteBuffer readBuffer = ByteBuffer.allocate(20);
+                    for (int i = 0; i < 200; i += 2) {
+                        readBuffer.clear();
+                        readBuffer.position(1);
+                        readBuffer.limit(17);
+                        int read = inputStream.readFully(i * 16L, readBuffer);
+                        Assert.assertEquals(16, read);
+                        Assert.assertEquals(i, readBuffer.getLong(1));
+                        Assert.assertEquals(i * 2, readBuffer.getLong(9));
+                    }
+                } catch (Exception e) {
+                    throw new CompletionException(e);
+                }
+            }));
+        }
+        FutureUtils.waitForAll(futureList).get();
         inputStream.close();
         remoteRocksdbFlinkFileSystem.delete(testFilePath, true);
         Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(testFilePath));

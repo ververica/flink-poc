@@ -19,10 +19,14 @@
 package org.apache.flink.state.remote.rocksdb.fs;
 
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.core.fs.PositionedReadable;
 import org.apache.flink.state.remote.rocksdb.fs.cache.CachedDataInputStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * ByteBufferReadableFSDataInputStream.
@@ -37,10 +41,18 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     private volatile long toSeek = -1L;
 
-    public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis, CachedDataInputStream cachedDataInputStream) {
+    private final ConcurrentLinkedQueue<FSDataInputStream> concurrentReadInputStreamPool;
+
+    private final Callable<FSDataInputStream> concurrentInputStreamBuilder;
+
+    public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis,
+                                               CachedDataInputStream cachedDataInputStream,
+                                               Callable<FSDataInputStream> concurrentInputStreamBuilder) {
         this.fsdis = fsdis;
         this.cachedDataInputStream = cachedDataInputStream;
         this.lock = new Object();
+        this.concurrentReadInputStreamPool = new ConcurrentLinkedQueue<>();
+        this.concurrentInputStreamBuilder = concurrentInputStreamBuilder;
     }
 
     private void seedIfNeeded() throws IOException {
@@ -90,8 +102,18 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     /**
      * Return the total number of bytes read into the buffer.
+     * REQUIRES: External synchronization
      */
     public int readFully(ByteBuffer bb) throws IOException {
+        Optional<Integer> result = tryReadFromCache(bb);
+        if (result.isPresent()) {
+            return result.get();
+        }
+        seedIfNeeded();
+        return readFullyFromFSDataInputStream(fsdis, bb);
+    }
+
+    private Optional<Integer> tryReadFromCache(ByteBuffer bb) throws IOException {
         if (cachedDataInputStream != null) {
             if (cachedDataInputStream.isAvailable()) {
                 if (toSeek < 0) {
@@ -99,12 +121,15 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
                 }
                 toSeek += bb.remaining();
                 int ret = cachedDataInputStream.readFully(bb);
-                return ret;
+                return Optional.of(ret);
             } else {
                 cachedDataInputStream = null;
             }
         }
-        seedIfNeeded();
+        return Optional.empty();
+    }
+
+    private static int readFullyFromFSDataInputStream(FSDataInputStream fsdis, ByteBuffer bb) throws IOException {
         byte[] tmp = new byte[bb.remaining()];
         int n = 0;
         while (n < tmp.length) {
@@ -122,12 +147,45 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     /**
      * Return the total number of bytes read into the buffer.
+     * Safe for concurrent use by multiple threads.
      */
     public int readFully(long position, ByteBuffer bb) throws IOException {
-        synchronized (lock) {
-            seek(position);
-            return readFully(bb);
+        if (cachedDataInputStream != null && cachedDataInputStream.isAvailable()) {
+            synchronized (lock) {
+                if (cachedDataInputStream != null && cachedDataInputStream.isAvailable()) {
+                    cachedDataInputStream.seek(position);
+                    Optional<Integer> result = tryReadFromCache(bb);
+                    if (result.isPresent()) {
+                        return result.get();
+                    }
+                }
+            }
         }
+
+        FSDataInputStream cacheRemoteStream;
+        while ((cacheRemoteStream = concurrentReadInputStreamPool.poll()) == null) {
+            try {
+                if (concurrentReadInputStreamPool.size() < 32) {
+                    cacheRemoteStream = concurrentInputStreamBuilder.call();
+                    break;
+                }
+                Thread.sleep(10);
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+
+        if (cacheRemoteStream instanceof PositionedReadable) {
+            byte[] tmp = new byte[bb.remaining()];
+            ((PositionedReadable) cacheRemoteStream).readFully(position, tmp, 0, tmp.length);
+            bb.put(tmp);
+            return tmp.length;
+        }
+
+        cacheRemoteStream.seek(position);
+        int result =  readFullyFromFSDataInputStream(cacheRemoteStream, bb);
+        concurrentReadInputStreamPool.offer(cacheRemoteStream);
+        return result;
     }
 
     @Override
@@ -145,6 +203,12 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
     @Override
     public void close() throws IOException {
         fsdis.close();
+        if (cachedDataInputStream != null) {
+            cachedDataInputStream.close();
+        }
+        for (FSDataInputStream inputStream : concurrentReadInputStreamPool) {
+            inputStream.close();
+        }
     }
 
     @Override
