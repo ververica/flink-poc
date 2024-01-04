@@ -203,9 +203,6 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
     @Override
     public void close() throws IOException {
         fsdis.close();
-        if (cachedDataInputStream != null) {
-            cachedDataInputStream.close();
-        }
         for (FSDataInputStream inputStream : concurrentReadInputStreamPool) {
             inputStream.close();
         }
