@@ -64,4 +64,10 @@ public class RemoteRocksDBOptions {
                     .longType()
                     .defaultValue(0L)
                     .withDescription("");
+
+    public static final ConfigOption<Long> REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION =
+            ConfigOptions.key("state.backend.remote-rocksdb.compaction.read-ahead.size")
+                    .longType()
+                    .defaultValue(8 * 1024 * 1024L)
+                    .withDescription("");
 }
