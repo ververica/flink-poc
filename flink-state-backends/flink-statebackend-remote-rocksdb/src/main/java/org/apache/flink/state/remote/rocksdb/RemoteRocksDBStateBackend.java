@@ -23,6 +23,7 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.contrib.streaming.state.DefaultConfigurableOptionsFactory;
 import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
 import org.apache.flink.contrib.streaming.state.RocksDBOperationUtils;
 import org.apache.flink.contrib.streaming.state.RocksDBResourceContainer;
@@ -45,6 +46,8 @@ import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBM
 
 import org.apache.flink.state.remote.rocksdb.fs.RemoteRocksdbFlinkFileSystem;
 
+import org.rocksdb.DBOptions;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +61,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+
+import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION;
 
 @PublicEvolving
 public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
@@ -88,6 +93,19 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                 config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_TIMEOUT_MILLS));
         LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}, ioParallelism {}",
                 remoteRocksDBMode, enableCacheLayer, workingDir, ioParallelism);
+        setRocksDBOptions(new DefaultConfigurableOptionsFactory() {
+            @Override
+            public DBOptions createDBOptions(DBOptions dbOptions, Collection<AutoCloseable> collection) {
+                super.createDBOptions(dbOptions, collection);
+
+                long readAhead = config.get(REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION);
+                dbOptions.setCompactionReadaheadSize(readAhead);
+                LOG.info("Compaction read ahead size set to {}.", readAhead);
+                dbOptions.setUseDirectIoForFlushAndCompaction(true);
+                dbOptions.setUseDirectReads(true);
+                return dbOptions;
+            }
+        });
     }
 
     @Override
