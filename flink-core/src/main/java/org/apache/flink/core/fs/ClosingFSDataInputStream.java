@@ -38,7 +38,7 @@ public class ClosingFSDataInputStream extends FSDataInputStreamWrapper
 
     private volatile boolean closed;
 
-    private ClosingFSDataInputStream(
+    protected ClosingFSDataInputStream(
             FSDataInputStream delegate, SafetyNetCloseableRegistry registry, String debugInfo)
             throws IOException {
         super(delegate);
@@ -93,8 +93,9 @@ public class ClosingFSDataInputStream extends FSDataInputStreamWrapper
             FSDataInputStream delegate, SafetyNetCloseableRegistry registry, String debugInfo)
             throws IOException {
 
-        ClosingFSDataInputStream inputStream =
-                new ClosingFSDataInputStream(delegate, registry, debugInfo);
+        ClosingFSDataInputStream inputStream = (delegate instanceof PositionedReadable)
+                ? new PositionedReadableClosingFSDataInputStream(delegate, registry, debugInfo)
+                : new ClosingFSDataInputStream(delegate, registry, debugInfo);
         registry.registerCloseable(inputStream);
         return inputStream;
     }
