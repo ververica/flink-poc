@@ -100,17 +100,21 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     @Override
     public ByteBufferReadableFSDataInputStream open(Path f, int bufferSize) throws IOException {
         FSDataInputStream original = flinkFS.open(f, bufferSize);
+        long fileSize = flinkFS.getFileStatus(f).getLen();
         return new ByteBufferReadableFSDataInputStream(original,
                 fileBasedCache == null ? null : fileBasedCache.open4Read(f),
-                () -> flinkFS.open(f, bufferSize));
+                () -> flinkFS.open(f, bufferSize),
+                fileSize);
     }
 
     @Override
     public ByteBufferReadableFSDataInputStream open(Path f) throws IOException {
         FSDataInputStream original = flinkFS.open(f);
+        long fileSize = flinkFS.getFileStatus(f).getLen();
         return new ByteBufferReadableFSDataInputStream(original,
                 fileBasedCache == null ? null : fileBasedCache.open4Read(f),
-                () -> flinkFS.open(f));
+                () -> flinkFS.open(f),
+                fileSize);
     }
 
     @Override

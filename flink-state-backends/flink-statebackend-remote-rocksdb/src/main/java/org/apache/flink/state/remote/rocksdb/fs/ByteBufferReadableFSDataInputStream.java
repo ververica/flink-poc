@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
+    private final long totalFileSize;
     private final FSDataInputStream fsdis;
 
     private volatile CachedDataInputStream cachedDataInputStream;
@@ -47,12 +48,14 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis,
                                                CachedDataInputStream cachedDataInputStream,
-                                               Callable<FSDataInputStream> concurrentInputStreamBuilder) {
+                                               Callable<FSDataInputStream> concurrentInputStreamBuilder,
+                                               long totalFileSize) {
         this.fsdis = fsdis;
         this.cachedDataInputStream = cachedDataInputStream;
         this.lock = new Object();
         this.concurrentReadInputStreamPool = new ConcurrentLinkedQueue<>();
         this.concurrentInputStreamBuilder = concurrentInputStreamBuilder;
+        this.totalFileSize = totalFileSize;
     }
 
     private void seedIfNeeded() throws IOException {
@@ -175,10 +178,12 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
             }
         }
 
-        if (cacheRemoteStream instanceof PositionedReadable) {
-            byte[] tmp = new byte[bb.remaining()];
+        if (cacheRemoteStream instanceof PositionedReadable && position + bb.remaining() <= totalFileSize) {
+            int len = Math.min(bb.remaining(), (int) (totalFileSize - position));
+            byte[] tmp = new byte[len];
             ((PositionedReadable) cacheRemoteStream).readFully(position, tmp, 0, tmp.length);
             bb.put(tmp);
+            concurrentReadInputStreamPool.offer(cacheRemoteStream);
             return tmp.length;
         }
 
