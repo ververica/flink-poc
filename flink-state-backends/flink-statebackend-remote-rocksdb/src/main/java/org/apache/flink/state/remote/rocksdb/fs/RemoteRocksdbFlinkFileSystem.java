@@ -85,7 +85,7 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     }
 
     public static FileSystem get(URI uri) throws IOException {
-        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout, metricGroup));
+        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null || cacheTtl <= 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout, metricGroup));
     }
 
     private static Path childCacheBase(Path base) {
