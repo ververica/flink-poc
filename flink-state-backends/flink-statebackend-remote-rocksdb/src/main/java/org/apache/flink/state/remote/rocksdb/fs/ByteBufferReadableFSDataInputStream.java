@@ -46,12 +46,16 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     private final Callable<FSDataInputStream> concurrentInputStreamBuilder;
 
+    private final Metrics metricsReporter;
+
     public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis,
                                                CachedDataInputStream cachedDataInputStream,
+                                               Metrics metricsReporter,
                                                Callable<FSDataInputStream> concurrentInputStreamBuilder,
                                                long totalFileSize) {
         this.fsdis = fsdis;
         this.cachedDataInputStream = cachedDataInputStream;
+        this.metricsReporter = metricsReporter;
         this.lock = new Object();
         this.concurrentReadInputStreamPool = new ConcurrentLinkedQueue<>();
         this.concurrentInputStreamBuilder = concurrentInputStreamBuilder;
@@ -71,6 +75,7 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
             if (cachedDataInputStream.isAvailable()) {
                 cachedDataInputStream.seek(desired);
             } else {
+                cachedDataInputStream.close();
                 cachedDataInputStream = null;
             }
         }
@@ -110,8 +115,10 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
     public int readFully(ByteBuffer bb) throws IOException {
         Optional<Integer> result = tryReadFromCache(bb);
         if (result.isPresent()) {
+            metricsReporter.hit();
             return result.get();
         }
+        metricsReporter.miss();
         seedIfNeeded();
         return readFullyFromFSDataInputStream(fsdis, bb);
     }
@@ -126,6 +133,7 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
                 int ret = cachedDataInputStream.readFully(bb);
                 return Optional.of(ret);
             } else {
+                cachedDataInputStream.close();
                 cachedDataInputStream = null;
             }
         }
@@ -153,17 +161,23 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
      * Safe for concurrent use by multiple threads.
      */
     public int readFully(long position, ByteBuffer bb) throws IOException {
-        if (cachedDataInputStream != null && cachedDataInputStream.isAvailable()) {
-            synchronized (lock) {
-                if (cachedDataInputStream != null && cachedDataInputStream.isAvailable()) {
+        synchronized (lock) {
+            if (cachedDataInputStream != null) {
+                if (cachedDataInputStream.isAvailable()) {
                     cachedDataInputStream.seek(position);
                     Optional<Integer> result = tryReadFromCache(bb);
                     if (result.isPresent()) {
+                        metricsReporter.hit();
                         return result.get();
                     }
+                } else {
+                    cachedDataInputStream.close();
+                    cachedDataInputStream = null;
                 }
             }
         }
+
+        metricsReporter.miss();
 
         FSDataInputStream cacheRemoteStream;
         while ((cacheRemoteStream = concurrentReadInputStreamPool.poll()) == null) {
@@ -227,6 +241,12 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
     @Override
     public boolean markSupported() {
         return fsdis.markSupported();
+    }
+
+    interface Metrics {
+        void hit();
+
+        void miss();
     }
 
 }

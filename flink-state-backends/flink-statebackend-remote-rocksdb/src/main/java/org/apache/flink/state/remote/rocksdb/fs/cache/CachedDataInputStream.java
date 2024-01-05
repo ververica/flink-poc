@@ -115,7 +115,7 @@ public class CachedDataInputStream extends FSDataInputStream {
 
     @Override
     public void close() throws IOException {
-        getStream().close();
+        closeStream();
     }
 
     @Override
