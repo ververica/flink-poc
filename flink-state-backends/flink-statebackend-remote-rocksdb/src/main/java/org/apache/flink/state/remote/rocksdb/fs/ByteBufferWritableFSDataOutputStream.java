@@ -18,6 +18,8 @@
 
 package org.apache.flink.state.remote.rocksdb.fs;
 
+import com.esotericsoftware.minlog.Log;
+
 import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.state.remote.rocksdb.fs.cache.CachedDataOutputStream;
@@ -100,9 +102,15 @@ public class ByteBufferWritableFSDataOutputStream extends FSDataOutputStream {
 
     @Override
     public void close() throws IOException {
-        fsdos.close();
-        if (cachedDataOutputStream != null) {
-            cachedDataOutputStream.close();
+        try {
+            fsdos.close();
+            if (cachedDataOutputStream != null) {
+                cachedDataOutputStream.close();
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+            Log.error("Error while closing file", e);
+            throw e;
         }
     }
 }

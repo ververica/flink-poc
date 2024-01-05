@@ -25,6 +25,8 @@ import org.apache.flink.core.fs.FSDataOutputStream;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 
+import org.apache.flink.metrics.MetricGroup;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class FileBasedCache implements Closeable {
 
@@ -51,8 +55,17 @@ public class FileBasedCache implements Closeable {
 
     private volatile boolean closed;
 
+    private final AtomicLong cacheHit = new AtomicLong(0L);
+
+    private final AtomicLong cacheMiss = new AtomicLong(0L);
+
+    private final AtomicLong cacheSize = new AtomicLong(0L);
 
     public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout) {
+        this(flinkFs, basePath, cacheTtl, timeout, null);
+    }
+
+    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout, MetricGroup metricGroup) {
         this.cacheFs = flinkFs;
         this.basePath = basePath;
         this.cacheTtl = cacheTtl;
@@ -61,7 +74,12 @@ public class FileBasedCache implements Closeable {
         this.timeTickService = new ScheduledThreadPoolExecutor(1, threadFactory);
         this.closed = false;
         scheduleClose(timeout);
-        LOG.info("Local fs-cache initialized at {}.", basePath);
+        if (metricGroup != null) {
+            metricGroup.gauge("hit", cacheHit::get);
+            metricGroup.gauge("miss", cacheMiss::get);
+            metricGroup.gauge("size", cacheSize::get);
+        }
+        LOG.info("Local fs-cache initialized at {} with ttl {} timeout {}.", basePath, cacheTtl, timeout);
     }
 
     @Override
@@ -109,6 +127,14 @@ public class FileBasedCache implements Closeable {
         return new Path(basePath, fromOriginal.getName());
     }
 
+    public void reportHit() {
+        cacheHit.incrementAndGet();
+    }
+
+    public void reportMiss() {
+        cacheMiss.incrementAndGet();
+    }
+
     class CacheEntry extends ReferenceCounted {
 
         private final Path originalPath;
@@ -122,6 +148,8 @@ public class FileBasedCache implements Closeable {
         private volatile boolean writing;
 
         private volatile boolean closed;
+
+        private long entrySize = 0L;
 
         CacheEntry(Path originalPath, Path cachePath) {
             super(1);
@@ -152,11 +180,16 @@ public class FileBasedCache implements Closeable {
         }
 
         public void close4Write() throws IOException {
+            long thisSize = fsDataOutputStream.getPos();
             fsDataOutputStream.close();
+            cacheSize.addAndGet(thisSize);
+            entrySize += thisSize;
             fsDataOutputStream = null;
             writing = false;
             release();
-            scheduleDelete(this);
+            if (!closed) {
+                scheduleDelete(this);
+            }
         }
 
         public void close4Read() {
@@ -178,6 +211,7 @@ public class FileBasedCache implements Closeable {
                     fsDataInputStream.close();
                     fsDataInputStream = null;
                 }
+                cacheSize.addAndGet(-entrySize);
                 cacheFs.delete(cachePath, false);
             } catch (Exception e) {
                 // ignore;

@@ -26,6 +26,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystemKind;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.local.LocalFileSystem;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.state.remote.rocksdb.fs.cache.FileBasedCache;
 
 import java.io.IOException;
@@ -43,9 +44,27 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
 
     private static long cacheTimeout = 0L;
 
+    private static MetricGroup metricGroup = null;
+
     private final FileSystem flinkFS;
 
     private final FileBasedCache fileBasedCache;
+
+    private final ByteBufferReadableFSDataInputStream.Metrics cacheMetricsReporter = new ByteBufferReadableFSDataInputStream.Metrics() {
+        @Override
+        public void hit() {
+            if (fileBasedCache != null) {
+                fileBasedCache.reportHit();
+            }
+        }
+
+        @Override
+        public void miss() {
+            if (fileBasedCache != null) {
+                fileBasedCache.reportMiss();
+            }
+        }
+    };
 
     public RemoteRocksdbFlinkFileSystem(FileSystem flinkFS, FileBasedCache fileBasedCache) {
         this.flinkFS = flinkFS;
@@ -61,8 +80,12 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
         cacheTimeout = timeout;
     }
 
+    public static void configureMetrics(MetricGroup group) {
+        metricGroup = group;
+    }
+
     public static FileSystem get(URI uri) throws IOException {
-        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout));
+        return new RemoteRocksdbFlinkFileSystem(FileSystem.get(uri), (cacheBase == null && cacheTtl > 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout, metricGroup));
     }
 
     private static Path childCacheBase(Path base) {
@@ -102,7 +125,7 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
         FSDataInputStream original = flinkFS.open(f, bufferSize);
         long fileSize = flinkFS.getFileStatus(f).getLen();
         return new ByteBufferReadableFSDataInputStream(original,
-                fileBasedCache == null ? null : fileBasedCache.open4Read(f),
+                fileBasedCache == null ? null : fileBasedCache.open4Read(f), cacheMetricsReporter,
                 () -> flinkFS.open(f, bufferSize),
                 fileSize);
     }
@@ -112,7 +135,7 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
         FSDataInputStream original = flinkFS.open(f);
         long fileSize = flinkFS.getFileStatus(f).getLen();
         return new ByteBufferReadableFSDataInputStream(original,
-                fileBasedCache == null ? null : fileBasedCache.open4Read(f),
+                fileBasedCache == null ? null : fileBasedCache.open4Read(f), cacheMetricsReporter,
                 () -> flinkFS.open(f),
                 fileSize);
     }

@@ -138,6 +138,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                         "rocksdb_dfs_cache");
 
         RemoteRocksdbFlinkFileSystem.configureCacheBase(tempCachePath);
+        RemoteRocksdbFlinkFileSystem.configureMetrics(metricGroup.addGroup("fs_cache"));
 
         // replace all characters that are not legal for filenames with underscore
         String fileCompatibleIdentifier = operatorIdentifier.replaceAll("[^a-zA-Z0-9\\-]", "_");
