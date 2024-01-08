@@ -240,7 +240,7 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
             }
         }
 
-        if (cacheRemoteStream instanceof PositionedReadable && position + bb.remaining() <= totalFileSize) {
+        if (cacheRemoteStream instanceof PositionedReadable) {
             byte[] tmp = new byte[len];
             ((PositionedReadable) cacheRemoteStream).readFully(position, tmp, 0, tmp.length);
             if (blockBasedCache != null) {
