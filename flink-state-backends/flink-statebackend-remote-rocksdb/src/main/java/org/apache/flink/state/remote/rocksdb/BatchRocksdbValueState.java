@@ -26,6 +26,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
+import org.apache.flink.runtime.state.internal.InternalValueState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 
 import org.rocksdb.ColumnFamilyHandle;
@@ -38,7 +39,7 @@ import java.util.Iterator;
  * BatchRocksdbValueState.
  */
 public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K, N, V>
-        implements InternalBatchValueState<K, N, V> {
+        implements InternalBatchValueState<K, N, V>, InternalValueState<K, N, V> {
 
     public BatchRocksdbValueState(
             ColumnFamilyHandle columnFamily,
