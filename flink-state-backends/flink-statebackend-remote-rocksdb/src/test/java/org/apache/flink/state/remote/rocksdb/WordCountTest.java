@@ -6,6 +6,7 @@ import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -67,6 +68,18 @@ public class WordCountTest {
     public void testWordCount() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(getConfiguration());
         DataStream<String> source = WordSource.getSource(env, 1000, 100000000, 50).setParallelism(1);
+        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        mapper.print().setParallelism(1);
+        env.execute();
+    }
+
+    @Test
+    public void testSingleWordCount() throws Exception {
+        Configuration configuration = getConfiguration();
+        configuration.set(ExecutionOptions.BUNDLE_OPERATOR_BATCH_ENABLED, false);
+        configuration.set(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER, false);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();

@@ -22,6 +22,7 @@ import org.apache.flink.annotation.PublicEvolving;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.ReadableConfig;
 import org.apache.flink.contrib.streaming.state.DefaultConfigurableOptionsFactory;
 import org.apache.flink.contrib.streaming.state.EmbeddedRocksDBStateBackend;
@@ -82,12 +83,18 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
     }
 
     public RemoteRocksDBStateBackend(
-            EmbeddedRocksDBStateBackend original, ReadableConfig config, ClassLoader classLoader) {
+            RemoteRocksDBStateBackend original, ReadableConfig config, ClassLoader classLoader) {
         super(original, config, classLoader);
-        this.remoteRocksDBMode = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE);
-        this.enableCacheLayer = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER);
-        this.workingDir = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
-        this.ioParallelism = config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
+        boolean init = original.remoteRocksDBMode != null;
+        this.remoteRocksDBMode = init ? original.remoteRocksDBMode : config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE);
+        if (init) {
+            this.enableCacheLayer = original.enableCacheLayer;
+        } else {
+            boolean isBatchEnabled = config.get(ExecutionOptions.BUNDLE_OPERATOR_BATCH_ENABLED);
+            this.enableCacheLayer = isBatchEnabled ? config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER) : false;
+        }
+        this.workingDir = init ? original.workingDir : config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR);
+        this.ioParallelism = init ? original.ioParallelism : config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
         RemoteRocksdbFlinkFileSystem.configureCacheTtl(
                 config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_LIVE_MILLS),
                 config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_TIMEOUT_MILLS));
