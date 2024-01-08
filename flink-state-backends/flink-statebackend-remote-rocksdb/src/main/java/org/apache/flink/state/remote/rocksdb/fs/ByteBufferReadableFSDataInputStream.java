@@ -18,8 +18,12 @@
 
 package org.apache.flink.state.remote.rocksdb.fs;
 
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.FSDataInputStream;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.PositionedReadable;
+import org.apache.flink.state.remote.rocksdb.fs.cache.BlockBasedCache;
 import org.apache.flink.state.remote.rocksdb.fs.cache.CachedDataInputStream;
 
 import java.io.IOException;
@@ -33,10 +37,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
+    private final Path path;
     private final long totalFileSize;
     private final FSDataInputStream fsdis;
 
     private volatile CachedDataInputStream cachedDataInputStream;
+
+    private final BlockBasedCache blockBasedCache;
 
     private final Object lock;
 
@@ -48,12 +55,17 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
 
     private final Metrics metricsReporter;
 
-    public ByteBufferReadableFSDataInputStream(FSDataInputStream fsdis,
-                                               CachedDataInputStream cachedDataInputStream,
-                                               Metrics metricsReporter,
-                                               Callable<FSDataInputStream> concurrentInputStreamBuilder,
-                                               long totalFileSize) {
+    public ByteBufferReadableFSDataInputStream(
+            Path path,
+            FSDataInputStream fsdis,
+            BlockBasedCache blockBasedCache,
+            CachedDataInputStream cachedDataInputStream,
+            Metrics metricsReporter,
+            Callable<FSDataInputStream> concurrentInputStreamBuilder,
+            long totalFileSize) {
+        this.path = path;
         this.fsdis = fsdis;
+        this.blockBasedCache = blockBasedCache;
         this.cachedDataInputStream = cachedDataInputStream;
         this.metricsReporter = metricsReporter;
         this.lock = new Object();
@@ -130,8 +142,20 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
                     toSeek = fsdis.getPos();
                 }
                 toSeek += bb.remaining();
-                int ret = cachedDataInputStream.readFully(bb);
-                return Optional.of(ret);
+                if (blockBasedCache != null) {
+                    long pos = cachedDataInputStream.getPos();
+                    Tuple2<byte[], Integer> ret = cachedDataInputStream.readFullyAndReturnBytes(bb);
+                    if (ret.f1 > 0) {
+                        Tuple3<Path, Long, Integer> cacheKey = Tuple3.of(path, pos, ret.f1);
+                        synchronized (blockBasedCache) {
+                            blockBasedCache.put(cacheKey, ret.f0);
+                        }
+                    }
+                    return Optional.of(ret.f1);
+                } else {
+                    int ret = cachedDataInputStream.readFully(bb);
+                    return Optional.of(ret);
+                }
             } else {
                 cachedDataInputStream.close();
                 cachedDataInputStream = null;
@@ -140,9 +164,10 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         return Optional.empty();
     }
 
-    private static int readFullyFromFSDataInputStream(FSDataInputStream fsdis, ByteBuffer bb) throws IOException {
+    private int readFullyFromFSDataInputStream(FSDataInputStream fsdis, ByteBuffer bb) throws IOException {
         byte[] tmp = new byte[bb.remaining()];
         int n = 0;
+        long pos = fsdis.getPos();
         while (n < tmp.length) {
             int read = fsdis.read(tmp, n, tmp.length - n);
             if (read == -1) {
@@ -152,6 +177,17 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         }
         if (n > 0) {
             bb.put(tmp, 0, n);
+            if (blockBasedCache != null) {
+                Tuple3<Path, Long, Integer> cacheKey = Tuple3.of(path, pos, n);;
+                if (n != tmp.length) {
+                    byte[] tmp2 = new byte[n];
+                    System.arraycopy(tmp, 0, tmp2, 0, n);
+                    tmp = tmp2;
+                }
+                synchronized (blockBasedCache) {
+                    blockBasedCache.put(cacheKey, tmp);
+                }
+            }
         }
         return n;
     }
@@ -161,6 +197,18 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
      * Safe for concurrent use by multiple threads.
      */
     public int readFully(long position, ByteBuffer bb) throws IOException {
+        int len = Math.min(bb.remaining(), (int) (totalFileSize - position));
+        Tuple3<Path, Long, Integer> cacheKey = null;
+        if (blockBasedCache != null) {
+            cacheKey = Tuple3.of(path, position, len);
+            synchronized (blockBasedCache) {
+                byte[] cached = blockBasedCache.get(cacheKey);
+                if (cached != null) {
+                    bb.put(cached);
+                    return Math.min(len, cached.length);
+                }
+            }
+        }
         synchronized (lock) {
             if (cachedDataInputStream != null) {
                 if (cachedDataInputStream.isAvailable()) {
@@ -182,7 +230,7 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         FSDataInputStream cacheRemoteStream;
         while ((cacheRemoteStream = concurrentReadInputStreamPool.poll()) == null) {
             try {
-                if (concurrentReadInputStreamPool.size() < 32) {
+                if (concurrentReadInputStreamPool.size() < 65) {
                     cacheRemoteStream = concurrentInputStreamBuilder.call();
                     break;
                 }
@@ -193,9 +241,13 @@ public class ByteBufferReadableFSDataInputStream extends FSDataInputStream {
         }
 
         if (cacheRemoteStream instanceof PositionedReadable && position + bb.remaining() <= totalFileSize) {
-            int len = Math.min(bb.remaining(), (int) (totalFileSize - position));
             byte[] tmp = new byte[len];
             ((PositionedReadable) cacheRemoteStream).readFully(position, tmp, 0, tmp.length);
+            if (blockBasedCache != null) {
+                synchronized (blockBasedCache) {
+                    blockBasedCache.put(cacheKey, tmp);
+                }
+            }
             bb.put(tmp);
             concurrentReadInputStreamPool.offer(cacheRemoteStream);
             return tmp.length;

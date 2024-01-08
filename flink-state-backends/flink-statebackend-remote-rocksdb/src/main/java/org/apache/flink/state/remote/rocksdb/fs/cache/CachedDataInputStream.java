@@ -18,6 +18,7 @@
 
 package org.apache.flink.state.remote.rocksdb.fs.cache;
 
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.FSDataInputStream;
 
 import java.io.IOException;
@@ -94,6 +95,28 @@ public class CachedDataInputStream extends FSDataInputStream {
         }
         closeStream();
         return n;
+    }
+
+    public Tuple2<byte[], Integer> readFullyAndReturnBytes(ByteBuffer bb) throws IOException {
+        byte[] tmp = new byte[bb.remaining()];
+        int n = 0;
+        while (n < tmp.length) {
+            int read = getStream().read(tmp, n, tmp.length - n);
+            if (read == -1) {
+                break;
+            }
+            n += read;
+        }
+        if (n > 0) {
+            bb.put(tmp, 0, n);
+            if (n != tmp.length) {
+                byte[] tmp2 = new byte[n];
+                System.arraycopy(tmp, 0, tmp2, 0, n);
+                tmp = tmp2;
+            }
+        }
+        closeStream();
+        return Tuple2.of(tmp, n);
     }
 
     public int readFully(long position, ByteBuffer bb) throws IOException {
