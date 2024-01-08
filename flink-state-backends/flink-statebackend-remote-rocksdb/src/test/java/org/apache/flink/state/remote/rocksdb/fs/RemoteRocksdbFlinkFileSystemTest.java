@@ -43,7 +43,7 @@ public class RemoteRocksdbFlinkFileSystemTest {
     public void testByteBufferInputStreamAndOutputStream() throws Exception {
         LocalFileSystem fileSystem = new LocalFileSystem();
         Path testFilePathForCache = new Path("/tmp", "cache");
-        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L));
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L), null);
         Path testFilePath = new Path("/tmp", "test-1");
         ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
         ByteBuffer writeBuffer = ByteBuffer.allocate(20);
@@ -106,7 +106,7 @@ public class RemoteRocksdbFlinkFileSystemTest {
     @Test
     public void testConcurrentPositionRead() throws Exception {
         LocalFileSystem fileSystem = new LocalFileSystem();
-        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, null);
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, null, null);
         Path testFilePath = new Path("/tmp", "test-2");
         ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
         ByteBuffer writeBuffer = ByteBuffer.allocate(20);

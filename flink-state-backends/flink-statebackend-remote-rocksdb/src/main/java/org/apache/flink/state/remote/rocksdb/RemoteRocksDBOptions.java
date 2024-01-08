@@ -58,7 +58,6 @@ public class RemoteRocksDBOptions {
                     .defaultValue(60000L)
                     .withDescription("");
 
-
     public static final ConfigOption<Long> REMOTE_ROCKSDB_FS_CACHE_TIMEOUT_MILLS =
             ConfigOptions.key("state.backend.remote-rocksdb.fs-cache.timeout")
                     .longType()
@@ -70,4 +69,11 @@ public class RemoteRocksDBOptions {
                     .longType()
                     .defaultValue(8 * 1024 * 1024L)
                     .withDescription("");
+
+    public static final ConfigOption<Long> REMOTE_ROCKSDB_BLOCK_CACHE_SIZE =
+            ConfigOptions.key("state.backend.remote-rocksdb.block-cache.size")
+                    .longType()
+                    .defaultValue(0L)
+                    .withDescription("");
+
 }
