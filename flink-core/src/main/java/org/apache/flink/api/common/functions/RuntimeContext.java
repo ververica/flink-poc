@@ -39,6 +39,8 @@ import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.groups.OperatorMetricGroup;
@@ -317,6 +319,10 @@ public interface RuntimeContext {
      */
     @PublicEvolving
     <T> ValueState<T> getState(ValueStateDescriptor<T> stateProperties);
+
+    default <T> AsyncValueState<T> getAsyncState(AsyncValueStateDescriptor<T> stateProperties) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Gets a handle to the system's key/value list state. This state is similar to the state

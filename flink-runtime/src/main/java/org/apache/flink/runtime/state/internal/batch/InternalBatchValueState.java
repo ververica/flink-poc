@@ -19,9 +19,19 @@
 package org.apache.flink.runtime.state.internal.batch;
 
 import org.apache.flink.api.common.state.batch.BatchValueState;
+import org.apache.flink.api.common.state.batch.CommittedValue;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.internal.InternalValueState;
+
+import java.io.IOException;
+import java.util.Collection;
 
 /**
  * InternalBatchValueState.
  */
-public interface InternalBatchValueState<K, N, T> extends InternalKvState<K, N, T>, BatchValueState<T> {}
+public interface InternalBatchValueState<K, N, T> extends InternalValueState<K, N, T> {
+    Iterable<Tuple2<K, T>> values(Collection<K> keys) throws IOException;
+
+    void update(K key, T value) throws IOException;
+}

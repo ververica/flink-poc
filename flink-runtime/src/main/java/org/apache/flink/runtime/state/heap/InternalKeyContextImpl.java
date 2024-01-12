@@ -44,6 +44,8 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
 
     private Collection<K> currentKeys;
 
+    private boolean inCallBackProcess;
+
     public InternalKeyContextImpl(
             @Nonnull KeyGroupRange keyGroupRange, @Nonnegative int numberOfKeyGroups) {
         this.keyGroupRange = keyGroupRange;
@@ -73,6 +75,18 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     @Override
     public void setCurrentKey(@Nonnull K currentKey) {
         this.currentKey = currentKey;
+        this.inCallBackProcess = false;
+    }
+
+    @Override
+    public void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack) {
+        setCurrentKey(currentKey);
+        this.inCallBackProcess = invokeByCallBack;
+    }
+
+    @Override
+    public boolean isInCallBackProcess() {
+        return inCallBackProcess;
     }
 
     @Override

@@ -43,6 +43,8 @@ import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.TernaryBoolean;
 
+import org.apache.flink.util.function.RunnableWithException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +55,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.function.BiFunction;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -353,7 +356,8 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
-            double managedMemoryFraction)
+            double managedMemoryFraction,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
             throws IOException {
         return rocksDBStateBackend.createKeyedStateBackend(
                 env,
@@ -367,7 +371,8 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
                 metricGroup,
                 stateHandles,
                 cancelStreamRegistry,
-                managedMemoryFraction);
+                managedMemoryFraction,
+                registerCallBackFunc);
     }
 
     @Override

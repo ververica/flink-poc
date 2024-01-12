@@ -1,4 +1,4 @@
-package org.apache.flink.runtime.state.batch;
+package org.apache.flink.runtime.state.async;
 
 public class BatchCacheStateConfig {
 

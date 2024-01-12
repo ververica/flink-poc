@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static org.apache.flink.streaming.runtime.tasks.mailbox.TaskMailbox.MIN_PRIORITY;
 import static org.apache.flink.util.Preconditions.checkState;
@@ -206,6 +207,8 @@ public class MailboxProcessor implements Closeable {
         }
     }
 
+    private ConcurrentLinkedDeque<RunnableWithException> callBackQueue = new ConcurrentLinkedDeque<>();
+
     /**
      * Runs the mailbox processing loop. This is where the main work is done. This loop can be
      * suspended at any time by calling {@link #suspend()}. For resuming the loop this method should
@@ -228,11 +231,27 @@ public class MailboxProcessor implements Closeable {
             // The blocking `processMail` call will not return until default action is available.
             processMail(localMailbox, false);
             if (isNextLoopPossible()) {
+                RunnableWithException nextCallBack = callBackQueue.poll();
+                while (nextCallBack != null) {
+                    nextCallBack.run();
+                    nextCallBack = callBackQueue.poll();
+                }
                 mailboxDefaultAction.runDefaultAction(
                         mailboxController); // lock is acquired inside default action as needed
             }
         }
     }
+
+    public Void registerAsyncStateCallBack(RunnableWithException runnable, boolean highPriority) {
+        if (highPriority) {
+            callBackQueue.offerFirst(runnable);
+        } else {
+            callBackQueue.offerLast(runnable);
+        }
+        return null;
+    }
+
+
 
     /** Suspend the running of the loop which was started by {@link #runMailboxLoop()}}. */
     public void suspend() {

@@ -23,10 +23,12 @@ import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
-import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
 import org.apache.flink.util.Disposable;
+import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.Collection;
+import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 /**
@@ -49,6 +51,10 @@ public interface KeyedStateBackend<K>
 
     default boolean isSupportBatchInterfaces() {
         return false;
+    }
+
+    default BiFunction<RunnableWithException, Boolean, Void> getRegisterCallBackFunc() {
+        throw new UnsupportedOperationException();
     }
 
     default BatchCacheStateConfig getBatchCacheStateConfig() {

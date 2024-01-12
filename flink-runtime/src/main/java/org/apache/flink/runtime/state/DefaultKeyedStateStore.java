@@ -33,6 +33,8 @@ import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.util.Preconditions;
 
 import static java.util.Objects.requireNonNull;
@@ -54,6 +56,17 @@ public class DefaultKeyedStateStore implements KeyedStateStore {
 
     @Override
     public <T> ValueState<T> getState(ValueStateDescriptor<T> stateProperties) {
+        requireNonNull(stateProperties, "The state properties must not be null");
+        try {
+            stateProperties.initializeSerializerUnlessSet(serializerFactory);
+            return getPartitionedState(stateProperties);
+        } catch (Exception e) {
+            throw new RuntimeException("Error while getting state", e);
+        }
+    }
+
+    @Override
+    public <T> AsyncValueState<T> getAsyncState(AsyncValueStateDescriptor<T> stateProperties) {
         requireNonNull(stateProperties, "The state properties must not be null");
         try {
             stateProperties.initializeSerializerUnlessSet(serializerFactory);

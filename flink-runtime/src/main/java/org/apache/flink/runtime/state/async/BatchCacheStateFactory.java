@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state.batch;
+package org.apache.flink.runtime.state.async;
 
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
@@ -27,9 +27,11 @@ import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateFactory;
 import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.function.RunnableWithException;
 import org.apache.flink.util.function.SupplierWithException;
 
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -46,16 +48,20 @@ public class BatchCacheStateFactory<
 
     protected final InternalKeyContext<K> keyContext;
 
+    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
+
     private BatchCacheStateFactory(
             InternalKvState<K, N, ?> kvState,
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
-            InternalKeyContext<K> keyContext) {
+            InternalKeyContext<K> keyContext,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
         this.kvState = kvState;
         this.stateDescriptor = stateDescriptor;
         this.batchCacheStateConfig = batchCacheStateConfig;
         this.stateFactories = createStateFactories();
         this.keyContext = keyContext;
+        this.registerCallBackFunc = registerCallBackFunc;
     }
 
     public static <K, N, V, S extends State>
@@ -64,14 +70,15 @@ public class BatchCacheStateFactory<
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
             InternalKeyContext<K> keyContext,
-            KeyedStateBackend keyedStateBackend)
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
             throws Exception {
         if (batchCacheStateConfig.isEnableCacheBatchData()) {
-            AbstractBatchCacheState<K, N, V, ?>  batchState =
-                    (AbstractBatchCacheState<K, N, V, ?>) (new BatchCacheStateFactory<>(kvState, stateDescriptor, batchCacheStateConfig, keyContext)
+            AbstractBatchAsyncState<K, N, V, ?>  asyncState =
+                    (AbstractBatchAsyncState<K, N, V, ?>) (new BatchCacheStateFactory<>
+                            (kvState, stateDescriptor, batchCacheStateConfig, keyContext, registerCallBackFunc)
                     .createState());
-            keyedStateBackend.registerCurrentKeysChangedListener(batchState);
-            return batchState;
+            //keyedStateBackend.registerCurrentKeysChangedListener(batchState);
+            return asyncState;
         }
         return kvState;
     }
@@ -100,9 +107,9 @@ public class BatchCacheStateFactory<
     @SuppressWarnings({"unchecked"})
     private IS createValueState() {
         return (IS)
-                new BatchCacheValueState<>(
+                new BatchAsyncValueState<>(
                         (InternalBatchValueState<K, N, V>) kvState,
                         keyContext,
-                        batchCacheStateConfig);
+                        registerCallBackFunc);
     }
 }

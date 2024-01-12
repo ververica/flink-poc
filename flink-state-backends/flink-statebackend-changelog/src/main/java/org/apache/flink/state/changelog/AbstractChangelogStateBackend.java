@@ -39,6 +39,8 @@ import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.state.changelog.restore.ChangelogBackendRestoreOperation.BaseBackendBuilder;
 import org.apache.flink.util.Preconditions;
 
+import org.apache.flink.util.function.RunnableWithException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +48,7 @@ import javax.annotation.Nonnull;
 
 import java.util.Collection;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -131,7 +134,8 @@ public abstract class AbstractChangelogStateBackend
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
-            double managedMemoryFraction)
+            double managedMemoryFraction,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
             throws Exception {
         return restore(
                 env,
@@ -154,7 +158,8 @@ public abstract class AbstractChangelogStateBackend
                                         metricGroup,
                                         baseHandles,
                                         cancelStreamRegistry,
-                                        managedMemoryFraction));
+                                        managedMemoryFraction,
+                                        registerCallBackFunc));
     }
 
     @Override

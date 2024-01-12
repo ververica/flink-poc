@@ -30,10 +30,12 @@ import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.RestoreMode;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
+import org.apache.flink.util.function.RunnableWithException;
 
 import javax.annotation.Nonnull;
 
 import java.util.Collection;
+import java.util.function.BiFunction;
 
 /**
  * A <b>State Backend</b> defines how the state of a streaming application is stored locally within
@@ -141,7 +143,8 @@ public interface StateBackend extends java.io.Serializable {
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
-            double managedMemoryFraction)
+            double managedMemoryFraction,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
             throws Exception {
 
         // ignore managed memory fraction by default
