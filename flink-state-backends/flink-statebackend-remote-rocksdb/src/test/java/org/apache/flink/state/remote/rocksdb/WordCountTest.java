@@ -3,6 +3,8 @@ package org.apache.flink.state.remote.rocksdb;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
@@ -43,31 +45,31 @@ public class WordCountTest {
 
     private static Configuration getConfiguration() {
         Configuration config = new Configuration();
-        OSSTestCredentials.assumeCredentialsAvailable();
-        config.setString("fs.oss.endpoint", OSSTestCredentials.getOSSEndpoint());
-        config.setString("fs.oss.accessKeyId", OSSTestCredentials.getOSSAccessKey());
-        config.setString("fs.oss.accessKeySecret", OSSTestCredentials.getOSSSecretKey());
+//        OSSTestCredentials.assumeCredentialsAvailable();
+//        config.setString("fs.oss.endpoint", OSSTestCredentials.getOSSEndpoint());
+//        config.setString("fs.oss.accessKeyId", OSSTestCredentials.getOSSAccessKey());
+//        config.setString("fs.oss.accessKeySecret", OSSTestCredentials.getOSSSecretKey());
         FileSystem.initialize(config, null);
 
         config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("1m"));
         config.set(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE, MemorySize.parse("1m"));
         config.set(StateBackendOptions.STATE_BACKEND,
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
-        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
+//        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
+//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
-//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
         config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/tmp-remote-test");
 
-//        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
-//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
+        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
         return config;
     }
 
     @Test
     public void testWordCount() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(getConfiguration());
-        DataStream<String> source = WordSource.getSource(env, 1000, 100000000, 50).setParallelism(1);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
@@ -87,31 +89,36 @@ public class WordCountTest {
 
     public static class MixedFlatMapper extends RichFlatMapFunction<String, Long> {
 
-        private transient ValueState<Integer> wordCounter;
+        private transient AsyncValueState<Integer> asyncWordCounter;
 
         public MixedFlatMapper() {
         }
 
         @Override
         public void flatMap(String in, Collector<Long> out) throws IOException {
-            Integer currentValue = wordCounter.value();
-
-            if (currentValue != null) {
-                wordCounter.update(currentValue + 1);
-                out.collect(currentValue + 1L);
-            } else {
-                wordCounter.update(1);
-                out.collect(1L);
-            }
+            asyncWordCounter.value(currentValue -> {
+                if (currentValue != null) {
+                    asyncWordCounter.update(currentValue + 1, empty -> {
+                        out.collect(currentValue + 1L);
+                        asyncWordCounter.commit();
+                    });
+                } else {
+                    asyncWordCounter.update(1, empty -> {
+                        out.collect(1L);
+                        asyncWordCounter.commit();
+                    });
+                }
+            });
+//            throw new RuntimeException();
         }
 
         @Override
         public void open(Configuration config) {
-            ValueStateDescriptor<Integer> descriptor =
-                    new ValueStateDescriptor<>(
+            AsyncValueStateDescriptor<Integer> descriptor =
+                    new AsyncValueStateDescriptor<>(
                             "wc",
                             TypeInformation.of(new TypeHint<Integer>(){}));
-            wordCounter = getRuntimeContext().getState(descriptor);
+            asyncWordCounter = getRuntimeContext().getAsyncState(descriptor);
         }
     }
 }

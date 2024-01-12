@@ -47,6 +47,8 @@ import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBM
 
 import org.apache.flink.state.remote.rocksdb.fs.RemoteRocksdbFlinkFileSystem;
 
+import org.apache.flink.util.function.RunnableWithException;
+
 import org.rocksdb.DBOptions;
 
 import org.slf4j.Logger;
@@ -62,6 +64,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.BiFunction;
 
 import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION;
 
@@ -135,7 +138,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
-            double managedMemoryFraction) throws IOException {
+            double managedMemoryFraction,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded
         // we do this explicitly here to have better error handling
@@ -209,7 +213,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                                 metricGroup,
                                 stateHandles,
                                 keyGroupCompressionDecorator,
-                                cancelStreamRegistry)
+                                cancelStreamRegistry,
+                                registerCallBackFunc)
                         .setEnableIncrementalCheckpointing(isIncrementalCheckpointsEnabled())
                         .setNumberOfTransferingThreads(getNumberOfTransferThreads())
                         .setNativeMetricOptions(

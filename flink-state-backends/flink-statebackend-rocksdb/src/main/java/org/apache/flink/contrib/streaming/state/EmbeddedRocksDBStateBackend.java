@@ -57,6 +57,8 @@ import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TernaryBoolean;
 
+import org.apache.flink.util.function.RunnableWithException;
+
 import org.rocksdb.NativeLibraryLoader;
 import org.rocksdb.RocksDB;
 import org.slf4j.Logger;
@@ -76,6 +78,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import static org.apache.flink.configuration.description.TextElement.text;
@@ -424,7 +427,8 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                 metricGroup,
                 stateHandles,
                 cancelStreamRegistry,
-                1.0);
+                1.0,
+                null);
     }
 
     @Override
@@ -440,7 +444,8 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
-            double managedMemoryFraction)
+            double managedMemoryFraction,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
             throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded

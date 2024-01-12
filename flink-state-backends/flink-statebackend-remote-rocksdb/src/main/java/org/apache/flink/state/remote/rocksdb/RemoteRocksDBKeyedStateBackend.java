@@ -35,7 +35,7 @@ import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
-import org.apache.flink.runtime.state.batch.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapper;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -43,6 +43,8 @@ import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.ResourceGuard;
+
+import org.apache.flink.util.function.RunnableWithException;
 
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
@@ -58,6 +60,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,6 +75,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     private final BatchCacheStateConfig batchCacheStateConfig;
 
     private final BatchParallelIOExecutor<K> batchParallelIOExecutor;
+
+    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
 
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -102,7 +107,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             PriorityQueueSetFactory priorityQueueFactory,
             RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             InternalKeyContext<K> keyContext,
-            long writeBatchSize) {
+            long writeBatchSize,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
         super(
                 userCodeClassLoader,
                 instanceBasePath,
@@ -134,6 +140,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         this.batchCacheStateConfig = new BatchCacheStateConfig(enableCacheLayer);
         ExecutorService executor = Executors.newFixedThreadPool(ioParallelism);
         this.batchParallelIOExecutor = new BatchParallelIOExecutor<>(executor);
+        this.registerCallBackFunc = registerCallBackFunc;
         LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
                 remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
     }
@@ -150,6 +157,11 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     @Override
     public boolean isSupportBatchInterfaces() {
         return true;
+    }
+
+    @Override
+    public BiFunction<RunnableWithException, Boolean, Void> getRegisterCallBackFunc() {
+        return registerCallBackFunc;
     }
 
     @Override

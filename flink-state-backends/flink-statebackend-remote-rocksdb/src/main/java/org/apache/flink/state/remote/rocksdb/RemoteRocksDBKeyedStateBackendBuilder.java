@@ -56,6 +56,8 @@ import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.ResourceGuard;
 
+import org.apache.flink.util.function.RunnableWithException;
+
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
 import org.rocksdb.DBOptions;
@@ -76,6 +78,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -97,6 +100,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
     private final boolean enableCacheLayer;
 
     private final int ioParallelism;
+
+    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
 
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -120,7 +125,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             MetricGroup metricGroup,
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             StreamCompressionDecorator keyGroupCompressionDecorator,
-            CloseableRegistry cancelStreamRegistry) {
+            CloseableRegistry cancelStreamRegistry,
+            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
         super(
                 operatorIdentifier,
                 userCodeClassLoader,
@@ -144,6 +150,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         this.workingDir = workingDir;
         this.enableCacheLayer = enableCacheLayer;
         this.ioParallelism = ioParallelism;
+        this.registerCallBackFunc = registerCallBackFunc;
     }
 
     @Override
@@ -298,7 +305,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 priorityQueueFactory,
                 ttlCompactFiltersManager,
                 keyContext,
-                writeBatchSize);
+                writeBatchSize,
+                registerCallBackFunc);
     }
 
     @Override

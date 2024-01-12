@@ -33,12 +33,13 @@ import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.RocksDBException;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
 
 /**
  * BatchRocksdbValueState.
  */
-public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K, N, V>
+public class BatchRocksdbValueState<K, N, V> extends AbstractRemoteRocksdbState<K, N, V>
         implements InternalBatchValueState<K, N, V>, InternalValueState<K, N, V> {
 
     public BatchRocksdbValueState(
@@ -52,8 +53,8 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
     }
 
     @Override
-    public Iterable<V> values() throws IOException {
-        return parallelIOExecutor.fetchValues(backend.getCurrentKeys(), key -> {
+    public  Iterable<Tuple2<K, V>> values(Collection<K> keys) throws IOException {
+        Iterable<V> values =  parallelIOExecutor.fetchValues(keys, key -> {
             byte[] valueBytes = db.get(columnFamily, serializeCurrentKeyWithGroupAndNamespace(key));
             if (valueBytes == null) {
                 return getDefaultValue();
@@ -62,9 +63,36 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
             deserializeView.setBuffer(valueBytes);
             return valueSerializer.deserialize(deserializeView);
         });
+        return () -> new Iterator<Tuple2<K, V>>() {
+            final Iterator<K> keyIter = keys.iterator();
+            final Iterator<V> valueIter = values.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return keyIter.hasNext() && valueIter.hasNext();
+            }
+
+            @Override
+            public Tuple2<K, V> next() {
+                return Tuple2.of(keyIter.next(), valueIter.next());
+            }
+        };
     }
 
     @Override
+    public void update(K key, V value) throws IOException {
+        try {
+            db.put(
+                    columnFamily,
+                    writeOptions,
+                    serializeCurrentKeyWithGroupAndNamespace(key),
+                    serializeValue(value));
+        } catch (RocksDBException e) {
+            throw new IOException("Error while adding data to RocksDB", e);
+        }
+    }
+
+//    @Override
     public void update(Iterable<CommittedValue<V>> values) throws IOException {
         try {
             Iterator<K> keyIter = backend.getCurrentKeys().iterator();
@@ -132,11 +160,6 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractBatchRocksdbState<K
     @Override
     public void clear() {
         throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public TypeSerializer getKeySerializer() {
-        return keySerializer;
     }
 
     @SuppressWarnings("unchecked")

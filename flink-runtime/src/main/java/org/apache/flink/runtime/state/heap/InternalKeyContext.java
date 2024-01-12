@@ -55,6 +55,10 @@ public interface InternalKeyContext<K> {
      */
     void setCurrentKey(@Nonnull K currentKey);
 
+    void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack);
+
+    boolean isInCallBackProcess();
+
     /**
      * Set current key group index of the context.
      *

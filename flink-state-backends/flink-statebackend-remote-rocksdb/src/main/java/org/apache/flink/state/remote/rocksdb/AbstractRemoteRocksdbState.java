@@ -24,11 +24,9 @@ import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
-import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 
 import org.apache.flink.util.Preconditions;
@@ -42,7 +40,7 @@ import java.io.IOException;
 /**
  * The abstract class for rocksdb batch State.
  */
-public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvState<K, N, V>, State {
+public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalKvState<K, N, V>, State {
 
     protected TypeSerializer<K> keySerializer;
 
@@ -75,7 +73,7 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
 
     private final int maxParallelism;
 
-    protected AbstractBatchRocksdbState(
+    protected AbstractRemoteRocksdbState(
             RemoteRocksDBKeyedStateBackend<K> backend,
             ColumnFamilyHandle columnFamily,
             TypeSerializer<K> keySerializer,
@@ -101,6 +99,11 @@ public abstract class AbstractBatchRocksdbState<K, N, V> implements InternalKvSt
                                maxParallelism),
                         32));
         this.parallelIOExecutor = backend.getBatchParallelIOExecutor();
+    }
+
+    @Override
+    public TypeSerializer getKeySerializer() {
+        return keySerializer;
     }
 
 

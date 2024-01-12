@@ -47,6 +47,7 @@ import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.util.OperatorSubtaskDescriptionText;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
+import org.apache.flink.streaming.runtime.tasks.mailbox.MailboxProcessor;
 import org.apache.flink.util.CloseableIterable;
 import org.apache.flink.util.Preconditions;
 
@@ -99,6 +100,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     private final StreamTaskCancellationContext cancellationContext;
 
+    private final MailboxProcessor mailboxProcessor;
+
     public StreamTaskStateInitializerImpl(Environment environment, StateBackend stateBackend) {
 
         this(
@@ -106,7 +109,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                 stateBackend,
                 TtlTimeProvider.DEFAULT,
                 InternalTimeServiceManagerImpl::create,
-                StreamTaskCancellationContext.alwaysRunning());
+                StreamTaskCancellationContext.alwaysRunning(),
+                null);
     }
 
     @VisibleForTesting
@@ -115,7 +119,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             StateBackend stateBackend,
             TtlTimeProvider ttlTimeProvider,
             InternalTimeServiceManager.Provider timeServiceManagerProvider,
-            StreamTaskCancellationContext cancellationContext) {
+            StreamTaskCancellationContext cancellationContext,
+            MailboxProcessor mailboxProcessor) {
 
         this.environment = environment;
         this.taskStateManager = Preconditions.checkNotNull(environment.getTaskStateManager());
@@ -123,6 +128,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         this.ttlTimeProvider = ttlTimeProvider;
         this.timeServiceManagerProvider = Preconditions.checkNotNull(timeServiceManagerProvider);
         this.cancellationContext = cancellationContext;
+        this.mailboxProcessor = mailboxProcessor;
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -347,7 +353,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                                         metricGroup,
                                                         stateHandles,
                                                         cancelStreamRegistryForRestore,
-                                                        managedMemoryFraction),
+                                                        managedMemoryFraction,
+                                                        mailboxProcessor::registerAsyncStateCallBack),
                                 backendCloseableRegistry,
                                 logDescription);
 

@@ -118,7 +118,6 @@ class RocksDBListState<K, N, V> extends AbstractRocksDBState<K, N, List<V>>
         byte[] valueBytes = backend.db.get(columnFamily, key);
         return listSerializer.deserializeList(valueBytes, elementSerializer);
     }
-
     @Override
     public void add(V value) throws IOException, RocksDBException {
         Preconditions.checkNotNull(value, "You cannot add null to a ListState.");

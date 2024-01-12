@@ -19,6 +19,8 @@
 package org.apache.flink.api.common.state;
 
 import org.apache.flink.annotation.PublicEvolving;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 
 /** This interface contains methods for registering keyed state with a managed store. */
 @PublicEvolving
@@ -67,6 +69,8 @@ public interface KeyedStateStore {
      */
     @PublicEvolving
     <T> ValueState<T> getState(ValueStateDescriptor<T> stateProperties);
+
+    <T> AsyncValueState<T> getAsyncState(AsyncValueStateDescriptor<T> stateProperties);
 
     /**
      * Gets a handle to the system's key/value list state. This state is similar to the state

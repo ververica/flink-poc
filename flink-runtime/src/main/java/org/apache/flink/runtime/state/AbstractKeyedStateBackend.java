@@ -28,7 +28,7 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.batch.BatchCacheStateFactory;
+import org.apache.flink.runtime.state.async.BatchCacheStateFactory;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -37,6 +37,8 @@ import org.apache.flink.runtime.state.ttl.TtlStateFactory;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.Preconditions;
+
+import javax.annotation.Nonnull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -255,6 +257,19 @@ public abstract class AbstractKeyedStateBackend<K>
                 KeyGroupRangeAssignment.assignToKeyGroup(newKey, numberOfKeyGroups));
     }
 
+    @Override
+    public void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack) {
+        notifyKeySelected(currentKey);
+        this.keyContext.setCurrentKey(currentKey, invokeByCallBack);
+        this.keyContext.setCurrentKeyGroupIndex(
+                KeyGroupRangeAssignment.assignToKeyGroup(currentKey, numberOfKeyGroups));
+    }
+
+    @Override
+    public boolean isInCallBackProcess() {
+        return keyContext.isInCallBackProcess();
+    }
+
     private void notifyKeySelected(K newKey) {
         // we prefer a for-loop over other iteration schemes for performance reasons here.
         for (int i = 0; i < keySelectionListeners.size(); ++i) {
@@ -379,7 +394,7 @@ public abstract class AbstractKeyedStateBackend<K>
                         stateDescriptor,
                         getBatchCacheStateConfig(),
                         keyContext,
-                        this);
+                        getRegisterCallBackFunc());
             }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);

@@ -1,25 +1,30 @@
-package org.apache.flink.runtime.state.batch;
+package org.apache.flink.runtime.state.async;
 
 import org.apache.flink.api.common.typeutils.TypeSerializer;
-import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
+import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
+import org.apache.flink.util.function.RunnableWithException;
 
-public abstract class AbstractBatchCacheState<
-        K, N, V, S extends InternalKvState<K, N, V>> implements InternalKvState<K, N, V>, KeyedStateBackend.ClearCurrentKeysCacheListener {
+import java.util.function.BiFunction;
+
+public class AbstractBatchAsyncState<K, N, V, S extends InternalBatchValueState<K, N, V>> implements InternalKvState<K, N, V> {
 
     protected S original;
 
     protected final InternalKeyContext<K> keyContext;
 
-    AbstractBatchCacheState(S original, InternalKeyContext<K> keyContext) {
+    protected final BatchKeyProcessor<K, N, V> batchKeyProcessor;
+
+    AbstractBatchAsyncState(S original, InternalKeyContext<K> keyContext, BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
         this.original = original;
         this.keyContext = keyContext;
+        this.batchKeyProcessor = new BatchKeyProcessor<>(original, keyContext, registerCallBackFunc);
     }
 
     @Override
     public void clear() {
-        original.clear();;
+        original.clear();
     }
 
     @Override
@@ -53,7 +58,7 @@ public abstract class AbstractBatchCacheState<
     }
 
     @Override
-    public StateIncrementalVisitor<K, N, V> getStateIncrementalVisitor(int recommendedMaxNumberOfReturnedRecords) {
+    public InternalKvState.StateIncrementalVisitor<K, N, V> getStateIncrementalVisitor(int recommendedMaxNumberOfReturnedRecords) {
         return original.getStateIncrementalVisitor(recommendedMaxNumberOfReturnedRecords);
     }
 }

@@ -281,14 +281,14 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
     //  basic transformations
     // ------------------------------------------------------------------------
 
-    @Override
-    public <R> SingleOutputStreamOperator<R> transform(
-            String operatorName,
-            TypeInformation<R> outTypeInfo,
-            OneInputStreamOperator<T, R> operator) {
-
-        return doTransform(operatorName, outTypeInfo, SimpleOperatorFactory.ofKeyed(operator));
-    }
+//    @Override
+//    public <R> SingleOutputStreamOperator<R> transform(
+//            String operatorName,
+//            TypeInformation<R> outTypeInfo,
+//            OneInputStreamOperator<T, R> operator) {
+//
+//        return doTransform(operatorName, outTypeInfo, SimpleOperatorFactory.ofKeyed(operator));
+//    }
 
     @Override
     protected <R> SingleOutputStreamOperator<R> doTransform(
