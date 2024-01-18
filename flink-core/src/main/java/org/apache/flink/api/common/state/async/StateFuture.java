@@ -19,19 +19,17 @@
 package org.apache.flink.api.common.state.async;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.api.common.state.State;
 
-import java.io.IOException;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
- * Async version corresponding to {@link org.apache.flink.api.common.state.ValueState}.
+ * The Future used async state interface.
  */
 @PublicEvolving
-public interface AsyncValueState<T> extends State {
+public interface StateFuture<T> {
 
-    StateFuture<T> value() throws StateUncheckedIOException;
+    <R> StateFuture<R> then(Function<? super T, ? extends R> action);
 
-    StateFuture<Void> update(T value) throws StateUncheckedIOException;
-
-    void commit();
+    StateFuture<Void> then(Consumer<? super T> action);
 }

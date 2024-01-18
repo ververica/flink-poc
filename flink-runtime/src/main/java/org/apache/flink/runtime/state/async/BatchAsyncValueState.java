@@ -1,6 +1,7 @@
 package org.apache.flink.runtime.state.async;
 
-import org.apache.flink.api.common.state.async.Callback;
+import org.apache.flink.api.common.state.async.StateFuture;
+import org.apache.flink.api.common.state.async.StateUncheckedIOException;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.async.InternalAsyncValueState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
@@ -25,15 +26,21 @@ public class BatchAsyncValueState<K, N, T>
     }
 
     @Override
-    public void value(Callback<T> callback) throws IOException {
-        batchKeyProcessor.get(keyContext.getCurrentKey(),
-                new InternalStateCallback<>(keyContext.getCurrentKey(), callback, keyContext));
+    public StateFuture<T> value() throws StateUncheckedIOException {
+        try {
+            return batchKeyProcessor.get(keyContext.getCurrentKey());
+        } catch (IOException e) {
+            throw new StateUncheckedIOException(e);
+        }
     }
 
     @Override
-    public void update(T value, Callback<Void> callback) throws IOException {
-        batchKeyProcessor.put(keyContext.getCurrentKey(), value,
-                new InternalStateCallback<>(keyContext.getCurrentKey(), callback, keyContext));
+    public StateFuture<Void> update(T value) throws StateUncheckedIOException {
+        try {
+            return batchKeyProcessor.put(keyContext.getCurrentKey(), value);
+        } catch (IOException e) {
+            throw new StateUncheckedIOException(e);
+        }
     }
 
     @Override
