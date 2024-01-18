@@ -96,20 +96,19 @@ public class WordCountTest {
 
         @Override
         public void flatMap(String in, Collector<Long> out) throws IOException {
-            asyncWordCounter.value(currentValue -> {
+            asyncWordCounter.value().then(currentValue -> {
                 if (currentValue != null) {
-                    asyncWordCounter.update(currentValue + 1, empty -> {
+                    asyncWordCounter.update(currentValue + 1).then(empty -> {
                         out.collect(currentValue + 1L);
                         asyncWordCounter.commit();
                     });
                 } else {
-                    asyncWordCounter.update(1, empty -> {
+                    asyncWordCounter.update(1).then(empty -> {
                         out.collect(1L);
                         asyncWordCounter.commit();
                     });
                 }
             });
-//            throw new RuntimeException();
         }
 
         @Override

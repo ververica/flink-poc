@@ -18,20 +18,20 @@
 
 package org.apache.flink.api.common.state.async;
 
+import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.api.common.state.State;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
-/**
- * Async version corresponding to {@link org.apache.flink.api.common.state.ValueState}.
- */
-@PublicEvolving
-public interface AsyncValueState<T> extends State {
+@Public
+public class StateUncheckedIOException extends UncheckedIOException {
 
-    StateFuture<T> value() throws StateUncheckedIOException;
+    public StateUncheckedIOException(IOException cause) {
+        super(cause);
+    }
 
-    StateFuture<Void> update(T value) throws StateUncheckedIOException;
-
-    void commit();
+    public StateUncheckedIOException(String message, IOException cause) {
+        super(message, cause);
+    }
 }

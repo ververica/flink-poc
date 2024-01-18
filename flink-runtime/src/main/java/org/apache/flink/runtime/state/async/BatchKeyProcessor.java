@@ -1,5 +1,6 @@
 package org.apache.flink.runtime.state.async;
 
+import org.apache.flink.api.common.state.async.StateFuture;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
@@ -55,46 +56,40 @@ public class BatchKeyProcessor<K, N, V> {
         this.registerCallBackFunc = registerCallBackFunc;
     }
 
-    public void get(K key, InternalStateCallback<K, V> callback) throws IOException {
-        LOG.trace("{} get from BatchKeyProcessor", key);
-        Operation<K, Void, V> getOperation = Operation.ofGet(callback);
-        boolean keyConflict = keyConflict(key);
-        if (keyConflict) {
-            pendingOperations.add(Tuple2.of(key, getOperation));
-            if (pendingOperations.size() > BATCH_MAX_SIZE) {
-                backPressureBecauseTooManyPendingOperations();
-            }
-            return;
-        }
-
-        batchingOperations.offer(Tuple2.of(key, getOperation));
-        batchingKeys.add(key);
-
-        if (batchingOperations.size() + pendingOperations.size() > BATCH_MAX_SIZE) {
-            LOG.trace("handle one batch: keyConflict {}, pendingOperations size {}", keyConflict, batchingOperations.size());
-            fireOneBatch(!keyContext.isInCallBackProcess());
-        }
+    public StateFuture<V> get(K key) throws IOException {
+        LOG.trace("Async get {} from BatchKeyProcessor", key);
+        StateFutureImpl<K, V> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc);
+        Operation<K, V, V> getOperation = Operation.ofGet(stateFuture);
+        handleOneStateOperation(key, getOperation);
+        return stateFuture;
     }
 
-    public void put(K key, V value, InternalStateCallback<K, Void> callback) throws IOException {
-        LOG.trace("{} put from BatchKeyProcessor", key);
-        Operation<K, V, Void> putOperation = Operation.ofPut(value, callback);
+    public StateFuture<Void> put(K key, V value) throws IOException {
+        LOG.trace("Async put {} to BatchKeyProcessor", key);
+        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc);
+        Operation<K, V, Void> putOperation = Operation.ofPut(value, stateFuture);
+        handleOneStateOperation(key, putOperation);
+        return stateFuture;
+    }
+
+    private void handleOneStateOperation(K key, Operation<K, V, ?> stateOperation) throws IOException {
         boolean keyConflict = keyConflict(key);
         if (keyConflict) {
-            pendingOperations.add(Tuple2.of(key, putOperation));
+            pendingOperations.add(Tuple2.of(key, stateOperation));
             if (pendingOperations.size() > BATCH_MAX_SIZE) {
                 backPressureBecauseTooManyPendingOperations();
             }
             return;
         }
 
-        batchingOperations.offer(Tuple2.of(key, putOperation));
+        batchingOperations.offer(Tuple2.of(key, stateOperation));
         batchingKeys.add(key);
 
         if (batchingOperations.size() + pendingOperations.size() > BATCH_MAX_SIZE) {
             LOG.trace("handle one batch: keyConflict {}, pendingOperations size {}", keyConflict, batchingOperations.size());
             fireOneBatch(!keyContext.isInCallBackProcess());
         }
+        return;
     }
 
     public void endKeyProcess(K key) {
@@ -117,13 +112,13 @@ public class BatchKeyProcessor<K, N, V> {
             return;
         }
         
-        Map<K, Operation<K, Void, V>> getOperations = new HashMap<>();
+        Map<K, Operation<K, V, V>> getOperations = new HashMap<>();
         Map<K, Operation<K, V, Void>> putOperations = new HashMap<>();
         for (Tuple2<K, Operation<K, ?, ?>> entry : batchingOperations) {
             if (entry.f1.type == OperationType.PUT) {
                 putOperations.put(entry.f0, (Operation<K, V, Void>) entry.f1);
             } else {
-                getOperations.put(entry.f0, (Operation<K, Void, V>) entry.f1);
+                getOperations.put(entry.f0, (Operation<K, V, V>) entry.f1);
             }
             onFlyingIORequestNum.incrementAndGet();
         }
@@ -133,9 +128,7 @@ public class BatchKeyProcessor<K, N, V> {
                 for (Map.Entry<K, Operation<K, V, Void>> entry : putOperations.entrySet()) {
                     batchValueState.update(entry.getKey(), entry.getValue().value);
                     onFlyingIORequestNum.decrementAndGet();
-                    registerCallBackFunc.apply(() -> {
-                        entry.getValue().callback.accept(null);
-                    }, false);
+                    entry.getValue().stateFuture.complete(null);
                     LOG.trace("handle put operation for key {}, onFlyingRecordNum {}", entry.getKey(), onFlyingIORequestNum.get());
                 }
 
@@ -144,12 +137,9 @@ public class BatchKeyProcessor<K, N, V> {
                 Iterator<Tuple2<K, V>> it = result.iterator();
                 while (it.hasNext()) {
                     Tuple2<K, V> kvPair = it.next();
-                    Operation<K, Void, V> getOperation = getOperations.get(kvPair.f0);
-                    registerCallBackFunc.apply(() -> {
-                        getOperation.callback.accept(kvPair.f1);
-                    }, false);
-                    
+                    Operation<K, V, V> getOperation = getOperations.get(kvPair.f0);
                     LOG.trace("handle get operation for key {}, onFlyingRecordNum {}", kvPair.f0, onFlyingIORequestNum.get());
+                    getOperation.stateFuture.complete(kvPair.f1);
                 }
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -196,25 +186,25 @@ public class BatchKeyProcessor<K, N, V> {
         }, false);
     }
 
-    static class Operation<K, V, C> {
+    static class Operation<K, V, F> {
         OperationType type;
 
         @Nullable V value;
 
-        InternalStateCallback<K, C> callback;
+        StateFutureImpl<K, F> stateFuture;
 
-        public Operation(OperationType type,  @Nullable V value,  InternalStateCallback<K, C> callback) {
+        public Operation(OperationType type,  @Nullable V value,  StateFutureImpl<K, F> stateFuture) {
             this.type = type;
             this.value = value;
-            this.callback = callback;
+            this.stateFuture = stateFuture;
         }
 
-        public static <K, V> Operation<K, Void, V> ofGet(InternalStateCallback<K, V> callback) {
-            return new Operation<>(OperationType.GET, null, callback);
+        public static <K, V> Operation<K, V, V> ofGet(StateFutureImpl<K, V> stateFuture) {
+            return new Operation<>(OperationType.GET, null, stateFuture);
         }
 
-        public static <K, V> Operation<K, V, Void> ofPut(V value, InternalStateCallback<K, Void> callback) {
-            return new Operation<>(OperationType.PUT, value, callback);
+        public static <K, V> Operation<K, V, Void> ofPut(V value, StateFutureImpl<K, Void> stateFuture) {
+            return new Operation<>(OperationType.PUT, value, stateFuture);
         }
     }
 
