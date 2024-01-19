@@ -48,7 +48,7 @@ import javax.annotation.Nonnull;
 
 import java.util.Collection;
 import java.util.Objects;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -135,7 +135,7 @@ public abstract class AbstractChangelogStateBackend
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws Exception {
         return restore(
                 env,

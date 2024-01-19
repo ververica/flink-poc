@@ -21,6 +21,7 @@ package org.apache.flink.streaming.util;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
+import org.apache.flink.api.common.operators.MailboxExecutor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.configuration.Configuration;
@@ -78,7 +79,6 @@ import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
 import org.apache.flink.streaming.runtime.tasks.TestProcessingTimeService;
-import org.apache.flink.streaming.runtime.tasks.mailbox.MailboxProcessor;
 import org.apache.flink.streaming.runtime.tasks.mailbox.TaskMailbox;
 import org.apache.flink.streaming.runtime.tasks.mailbox.TaskMailboxImpl;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
@@ -342,7 +342,7 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
                 ttlTimeProvider,
                 timeServiceManagerProvider,
                 StreamTaskCancellationContext.alwaysRunning(),
-                Mockito.mock(MailboxProcessor.class));
+                Mockito.mock(MailboxExecutor.class));
     }
 
     public void setStateBackend(StateBackend stateBackend) {

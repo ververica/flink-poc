@@ -79,6 +79,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
@@ -101,7 +102,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private final int ioParallelism;
 
-    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
+    private final Consumer<RunnableWithException> registerCallBackFunc;
 
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -126,7 +127,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             StreamCompressionDecorator keyGroupCompressionDecorator,
             CloseableRegistry cancelStreamRegistry,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc) {
         super(
                 operatorIdentifier,
                 userCodeClassLoader,

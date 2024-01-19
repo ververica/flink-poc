@@ -31,7 +31,7 @@ import org.apache.flink.util.function.RunnableWithException;
 import org.apache.flink.util.function.SupplierWithException;
 
 import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,14 +48,14 @@ public class BatchCacheStateFactory<
 
     protected final InternalKeyContext<K> keyContext;
 
-    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
+    private final Consumer<RunnableWithException> registerCallBackFunc;
 
     private BatchCacheStateFactory(
             InternalKvState<K, N, ?> kvState,
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
             InternalKeyContext<K> keyContext,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc) {
         this.kvState = kvState;
         this.stateDescriptor = stateDescriptor;
         this.batchCacheStateConfig = batchCacheStateConfig;
@@ -70,7 +70,7 @@ public class BatchCacheStateFactory<
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
             InternalKeyContext<K> keyContext,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws Exception {
         if (batchCacheStateConfig.isEnableCacheBatchData()) {
             AbstractBatchAsyncState<K, N, V, ?>  asyncState =

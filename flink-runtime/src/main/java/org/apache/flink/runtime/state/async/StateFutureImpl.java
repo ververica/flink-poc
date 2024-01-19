@@ -19,11 +19,11 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
 
     private final InternalKeyContext<K> keyContext;
 
-    private final BiFunction<RunnableWithException, Boolean, Void> registerMailBoxCallBackFunc;
+    private final Consumer<RunnableWithException> registerMailBoxCallBackFunc;
 
     public StateFutureImpl(K currentKey,
                            InternalKeyContext<K> internalKeyContext,
-                           BiFunction<RunnableWithException, Boolean, Void> registerMailBoxCallBackFunc) {
+                           Consumer<RunnableWithException> registerMailBoxCallBackFunc) {
         this.future = new CompletableFuture<>();
         this.currentKey = currentKey;
         this.keyContext = internalKeyContext;
@@ -38,11 +38,11 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
     @Override
     public <R> StateFuture<R> then(Function<? super V, ? extends R> action) {
         StateFutureImpl<K, R> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc);
-        future.thenAccept(value -> registerMailBoxCallBackFunc.apply(() -> {
+        future.thenAccept(value -> registerMailBoxCallBackFunc.accept(() -> {
             keyContext.setCurrentKey(currentKey, true);
             R result = action.apply(value);
             stateFuture.complete(result);
-        }, false));
+        }));
         return stateFuture;
     }
 
@@ -50,11 +50,11 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
     public StateFuture<Void> then(Consumer<? super V> action) {
         StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
-            registerMailBoxCallBackFunc.apply(() -> {
+            registerMailBoxCallBackFunc.accept(() -> {
                 keyContext.setCurrentKey(currentKey, true);
                 action.accept(value);
                 stateFuture.complete(null);
-            }, false);
+            });
         });
         return stateFuture;
     }

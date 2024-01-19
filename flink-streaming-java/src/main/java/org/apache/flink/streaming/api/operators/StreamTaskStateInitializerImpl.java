@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.TaskInfo;
+import org.apache.flink.api.common.operators.MailboxExecutor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.core.fs.CloseableRegistry;
@@ -52,6 +53,7 @@ import org.apache.flink.util.CloseableIterable;
 import org.apache.flink.util.Preconditions;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.flink.util.function.RunnableWithException;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -64,6 +66,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.OptionalLong;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
 import static org.apache.flink.runtime.state.StateBackendLoader.loadStateBackendFromKeyedStateHandles;
@@ -100,7 +104,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     private final StreamTaskCancellationContext cancellationContext;
 
-    private final MailboxProcessor mailboxProcessor;
+    private final MailboxExecutor mailboxExecutor;
 
     public StreamTaskStateInitializerImpl(Environment environment, StateBackend stateBackend) {
 
@@ -120,7 +124,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             TtlTimeProvider ttlTimeProvider,
             InternalTimeServiceManager.Provider timeServiceManagerProvider,
             StreamTaskCancellationContext cancellationContext,
-            MailboxProcessor mailboxProcessor) {
+            MailboxExecutor mailboxExecutor) {
 
         this.environment = environment;
         this.taskStateManager = Preconditions.checkNotNull(environment.getTaskStateManager());
@@ -128,7 +132,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         this.ttlTimeProvider = ttlTimeProvider;
         this.timeServiceManagerProvider = Preconditions.checkNotNull(timeServiceManagerProvider);
         this.cancellationContext = cancellationContext;
-        this.mailboxProcessor = mailboxProcessor;
+        this.mailboxExecutor = mailboxExecutor;
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -354,7 +358,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                                         stateHandles,
                                                         cancelStreamRegistryForRestore,
                                                         managedMemoryFraction,
-                                                        mailboxProcessor::registerAsyncStateCallBack),
+                                                        deferStateCallbackToMailbox(mailboxExecutor)),
                                 backendCloseableRegistry,
                                 logDescription);
 
@@ -708,5 +712,12 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         public CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs() {
             return rawKeyedStateInputs;
         }
+    }
+
+    Consumer<RunnableWithException> deferStateCallbackToMailbox(
+            MailboxExecutor mailboxExecutor) {
+        return stateCallback -> {
+            mailboxExecutor.execute(() -> stateCallback.run(), "State call back");
+        };
     }
 }

@@ -8,7 +8,7 @@ import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 import org.apache.flink.util.function.RunnableWithException;
 
 import java.io.IOException;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 public class BatchAsyncValueState<K, N, T>
         extends AbstractBatchAsyncState<
@@ -21,7 +21,7 @@ public class BatchAsyncValueState<K, N, T>
     BatchAsyncValueState(
             InternalBatchValueState<K, N, T> original,
             InternalKeyContext<K> keyContext,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc) {
         super(original, keyContext, registerCallBackFunc);
     }
 

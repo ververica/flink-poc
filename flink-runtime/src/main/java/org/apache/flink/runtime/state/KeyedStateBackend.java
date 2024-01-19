@@ -28,7 +28,7 @@ import org.apache.flink.util.Disposable;
 import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -53,7 +53,7 @@ public interface KeyedStateBackend<K>
         return false;
     }
 
-    default BiFunction<RunnableWithException, Boolean, Void> getRegisterCallBackFunc() {
+    default Consumer<RunnableWithException> getRegisterCallBackFunc() {
         throw new UnsupportedOperationException();
     }
 
