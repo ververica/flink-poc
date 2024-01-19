@@ -704,7 +704,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         ? timerServiceProvider
                         : InternalTimeServiceManagerImpl::create,
                 () -> canceled,
-                mailboxProcessor);
+                mainMailboxExecutor);
     }
 
     protected Counter setupNumRecordsInCounter(StreamOperator streamOperator) {

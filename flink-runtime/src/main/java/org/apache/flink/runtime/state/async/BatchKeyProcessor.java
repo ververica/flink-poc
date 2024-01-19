@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 public class BatchKeyProcessor<K, N, V> {
 
@@ -42,14 +43,14 @@ public class BatchKeyProcessor<K, N, V> {
 
     protected final ExecutorService asyncExecutors;
 
-    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
+    private final Consumer<RunnableWithException> registerCallBackFunc;
 
     private final InternalKeyContext<K> keyContext;
 
     public BatchKeyProcessor(
             InternalBatchValueState<K, N, V> batchValueState,
             InternalKeyContext<K> keyContext,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc) {
         this.asyncExecutors = Executors.newFixedThreadPool(2);
         this.batchValueState = batchValueState;
         this.keyContext = keyContext;
@@ -163,7 +164,7 @@ public class BatchKeyProcessor<K, N, V> {
     }
 
     private void backPressureBecauseTooManyPendingOperations() throws IOException {
-        registerCallBackFunc.apply(() -> {
+        registerCallBackFunc.accept(() -> {
             if (pendingOperations.size() > BATCH_MAX_SIZE) {
                 fireOneBatch(false);
                 try {
@@ -174,16 +175,16 @@ public class BatchKeyProcessor<K, N, V> {
                 LOG.trace("pending process by BatchKeyProcessor : pendingOperations num {}", pendingOperations.size());
                 backPressureBecauseTooManyPendingOperations();
             }
-        }, false);
+        });
     }
 
     private void backPressureBecauseTooManyOnFlyingIORequests() {
-        registerCallBackFunc.apply(() -> {
+        registerCallBackFunc.accept(() -> {
             while (onFlyingIORequestNum.get() > MAX_ON_FLYING_RECORDING_NUM) {
                 Thread.sleep(50);
                 LOG.info("handleOneBatch sleep 50 ms with onFlyingRecordNum {}", onFlyingIORequestNum.get());
             }
-        }, false);
+        });
     }
 
     static class Operation<K, V, F> {

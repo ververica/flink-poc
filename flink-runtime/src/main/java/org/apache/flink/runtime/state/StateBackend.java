@@ -36,6 +36,7 @@ import javax.annotation.Nonnull;
 
 import java.util.Collection;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 /**
  * A <b>State Backend</b> defines how the state of a streaming application is stored locally within
@@ -144,7 +145,7 @@ public interface StateBackend extends java.io.Serializable {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws Exception {
 
         // ignore managed memory fraction by default

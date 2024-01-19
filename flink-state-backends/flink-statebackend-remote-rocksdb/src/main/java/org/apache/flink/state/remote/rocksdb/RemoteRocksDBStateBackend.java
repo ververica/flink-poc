@@ -64,7 +64,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION;
 
@@ -139,7 +139,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) throws IOException {
+            Consumer<RunnableWithException> registerCallBackFunc) throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded
         // we do this explicitly here to have better error handling

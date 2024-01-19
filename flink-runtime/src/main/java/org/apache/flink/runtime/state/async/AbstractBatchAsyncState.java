@@ -6,7 +6,7 @@ import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.internal.batch.InternalBatchValueState;
 import org.apache.flink.util.function.RunnableWithException;
 
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 public class AbstractBatchAsyncState<K, N, V, S extends InternalBatchValueState<K, N, V>> implements InternalKvState<K, N, V> {
 
@@ -16,7 +16,7 @@ public class AbstractBatchAsyncState<K, N, V, S extends InternalBatchValueState<
 
     protected final BatchKeyProcessor<K, N, V> batchKeyProcessor;
 
-    AbstractBatchAsyncState(S original, InternalKeyContext<K> keyContext, BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+    AbstractBatchAsyncState(S original, InternalKeyContext<K> keyContext, Consumer<RunnableWithException> registerCallBackFunc) {
         this.original = original;
         this.keyContext = keyContext;
         this.batchKeyProcessor = new BatchKeyProcessor<>(original, keyContext, registerCallBackFunc);

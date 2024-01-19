@@ -78,7 +78,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.apache.flink.configuration.description.TextElement.text;
@@ -445,7 +445,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded

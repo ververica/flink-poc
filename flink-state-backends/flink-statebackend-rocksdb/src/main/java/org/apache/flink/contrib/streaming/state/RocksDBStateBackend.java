@@ -55,7 +55,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -357,7 +357,7 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws IOException {
         return rocksDBStateBackend.createKeyedStateBackend(
                 env,

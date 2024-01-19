@@ -30,7 +30,7 @@ import org.apache.flink.util.function.RunnableWithException;
 import javax.annotation.Nonnull;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 /** Abstract base class for state backends that use managed memory. */
 public abstract class AbstractManagedMemoryStateBackend extends AbstractStateBackend {
@@ -51,7 +51,7 @@ public abstract class AbstractManagedMemoryStateBackend extends AbstractStateBac
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc)
             throws Exception;
 
     @Override

@@ -60,7 +60,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -76,7 +76,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
 
     private final BatchParallelIOExecutor<K> batchParallelIOExecutor;
 
-    private final BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc;
+    private final Consumer<RunnableWithException> registerCallBackFunc;
 
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -108,7 +108,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             InternalKeyContext<K> keyContext,
             long writeBatchSize,
-            BiFunction<RunnableWithException, Boolean, Void> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc) {
         super(
                 userCodeClassLoader,
                 instanceBasePath,
@@ -160,7 +160,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     }
 
     @Override
-    public BiFunction<RunnableWithException, Boolean, Void> getRegisterCallBackFunc() {
+    public Consumer<RunnableWithException> getRegisterCallBackFunc() {
         return registerCallBackFunc;
     }
 
