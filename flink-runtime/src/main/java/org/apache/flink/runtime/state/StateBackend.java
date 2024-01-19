@@ -145,7 +145,8 @@ public interface StateBackend extends java.io.Serializable {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq)
             throws Exception {
 
         // ignore managed memory fraction by default

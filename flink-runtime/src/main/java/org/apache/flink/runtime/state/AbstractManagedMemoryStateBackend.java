@@ -51,7 +51,8 @@ public abstract class AbstractManagedMemoryStateBackend extends AbstractStateBac
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq)
             throws Exception;
 
     @Override

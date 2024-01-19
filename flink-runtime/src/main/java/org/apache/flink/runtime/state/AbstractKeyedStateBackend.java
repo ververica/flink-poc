@@ -394,7 +394,8 @@ public abstract class AbstractKeyedStateBackend<K>
                         stateDescriptor,
                         getBatchCacheStateConfig(),
                         keyContext,
-                        getRegisterCallBackFunc());
+                        getRegisterCallBackFunc(),
+                        updateOngoingStateReqFunc());
             }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);

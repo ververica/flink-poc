@@ -104,6 +104,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private final Consumer<RunnableWithException> registerCallBackFunc;
 
+    private Consumer<Integer> updateOngoingStateReq;
+
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
@@ -307,7 +309,8 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 ttlCompactFiltersManager,
                 keyContext,
                 writeBatchSize,
-                registerCallBackFunc);
+                registerCallBackFunc,
+                updateOngoingStateReq);
     }
 
     @Override
@@ -349,5 +352,11 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             super.prepareDirectories();
         }
         //TODO
+    }
+
+    public RemoteRocksDBKeyedStateBackendBuilder<K> setUpdateOngoingStateReqFunc(
+            Consumer<Integer> updateOngoingStateReq) {
+        this.updateOngoingStateReq = updateOngoingStateReq;
+        return this;
     }
 }

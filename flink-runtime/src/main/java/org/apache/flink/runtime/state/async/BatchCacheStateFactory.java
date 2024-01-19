@@ -50,18 +50,22 @@ public class BatchCacheStateFactory<
 
     private final Consumer<RunnableWithException> registerCallBackFunc;
 
+    private final Consumer<Integer> updateOngoingStateReq;
+
     private BatchCacheStateFactory(
             InternalKvState<K, N, ?> kvState,
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
             InternalKeyContext<K> keyContext,
-            Consumer<RunnableWithException> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq) {
         this.kvState = kvState;
         this.stateDescriptor = stateDescriptor;
         this.batchCacheStateConfig = batchCacheStateConfig;
         this.stateFactories = createStateFactories();
         this.keyContext = keyContext;
         this.registerCallBackFunc = registerCallBackFunc;
+        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
     public static <K, N, V, S extends State>
@@ -70,12 +74,13 @@ public class BatchCacheStateFactory<
             StateDescriptor<S, V> stateDescriptor,
             BatchCacheStateConfig batchCacheStateConfig,
             InternalKeyContext<K> keyContext,
-            Consumer<RunnableWithException> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq)
             throws Exception {
         if (batchCacheStateConfig.isEnableCacheBatchData()) {
             AbstractBatchAsyncState<K, N, V, ?>  asyncState =
                     (AbstractBatchAsyncState<K, N, V, ?>) (new BatchCacheStateFactory<>
-                            (kvState, stateDescriptor, batchCacheStateConfig, keyContext, registerCallBackFunc)
+                            (kvState, stateDescriptor, batchCacheStateConfig, keyContext, registerCallBackFunc, updateOngoingStateReq)
                     .createState());
             //keyedStateBackend.registerCurrentKeysChangedListener(batchState);
             return asyncState;
@@ -110,6 +115,6 @@ public class BatchCacheStateFactory<
                 new BatchAsyncValueState<>(
                         (InternalBatchValueState<K, N, V>) kvState,
                         keyContext,
-                        registerCallBackFunc);
+                        registerCallBackFunc, updateOngoingStateReq);
     }
 }

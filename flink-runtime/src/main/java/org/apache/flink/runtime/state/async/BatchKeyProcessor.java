@@ -45,21 +45,25 @@ public class BatchKeyProcessor<K, N, V> {
 
     private final Consumer<RunnableWithException> registerCallBackFunc;
 
+    private final Consumer<Integer> updateOngoingStateReq;
+
     private final InternalKeyContext<K> keyContext;
 
     public BatchKeyProcessor(
             InternalBatchValueState<K, N, V> batchValueState,
             InternalKeyContext<K> keyContext,
-            Consumer<RunnableWithException> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq) {
         this.asyncExecutors = Executors.newFixedThreadPool(2);
         this.batchValueState = batchValueState;
         this.keyContext = keyContext;
         this.registerCallBackFunc = registerCallBackFunc;
+        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
     public StateFuture<V> get(K key) throws IOException {
         LOG.trace("Async get {} from BatchKeyProcessor", key);
-        StateFutureImpl<K, V> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc);
+        StateFutureImpl<K, V> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc, updateOngoingStateReq);
         Operation<K, V, V> getOperation = Operation.ofGet(stateFuture);
         handleOneStateOperation(key, getOperation);
         return stateFuture;
@@ -67,7 +71,7 @@ public class BatchKeyProcessor<K, N, V> {
 
     public StateFuture<Void> put(K key, V value) throws IOException {
         LOG.trace("Async put {} to BatchKeyProcessor", key);
-        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc);
+        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc, updateOngoingStateReq);
         Operation<K, V, Void> putOperation = Operation.ofPut(value, stateFuture);
         handleOneStateOperation(key, putOperation);
         return stateFuture;

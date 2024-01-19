@@ -357,7 +357,8 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq)
             throws IOException {
         return rocksDBStateBackend.createKeyedStateBackend(
                 env,
@@ -372,7 +373,8 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
                 stateHandles,
                 cancelStreamRegistry,
                 managedMemoryFraction,
-                registerCallBackFunc);
+                registerCallBackFunc,
+                updateOngoingStateReq);
     }
 
     @Override
