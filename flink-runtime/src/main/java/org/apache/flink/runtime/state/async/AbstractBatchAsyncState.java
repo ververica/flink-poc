@@ -16,10 +16,11 @@ public class AbstractBatchAsyncState<K, N, V, S extends InternalBatchValueState<
 
     protected final BatchKeyProcessor<K, N, V> batchKeyProcessor;
 
-    AbstractBatchAsyncState(S original, InternalKeyContext<K> keyContext, Consumer<RunnableWithException> registerCallBackFunc) {
+    AbstractBatchAsyncState(S original, InternalKeyContext<K> keyContext, Consumer<RunnableWithException> registerCallBackFunc,
+                            Consumer<Integer> updateOngoingStateReq) {
         this.original = original;
         this.keyContext = keyContext;
-        this.batchKeyProcessor = new BatchKeyProcessor<>(original, keyContext, registerCallBackFunc);
+        this.batchKeyProcessor = new BatchKeyProcessor<>(original, keyContext, registerCallBackFunc, updateOngoingStateReq);
     }
 
     @Override

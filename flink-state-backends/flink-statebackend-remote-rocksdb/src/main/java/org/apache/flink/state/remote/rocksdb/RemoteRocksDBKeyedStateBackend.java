@@ -78,6 +78,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
 
     private final Consumer<RunnableWithException> registerCallBackFunc;
 
+    private final Consumer<Integer> updateOngoingStateReq;
+
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
@@ -108,7 +110,8 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             InternalKeyContext<K> keyContext,
             long writeBatchSize,
-            Consumer<RunnableWithException> registerCallBackFunc) {
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq) {
         super(
                 userCodeClassLoader,
                 instanceBasePath,
@@ -141,6 +144,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         ExecutorService executor = Executors.newFixedThreadPool(ioParallelism);
         this.batchParallelIOExecutor = new BatchParallelIOExecutor<>(executor);
         this.registerCallBackFunc = registerCallBackFunc;
+        this.updateOngoingStateReq = updateOngoingStateReq;
         LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
                 remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
     }
@@ -162,6 +166,11 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     @Override
     public Consumer<RunnableWithException> getRegisterCallBackFunc() {
         return registerCallBackFunc;
+    }
+
+    @Override
+    public Consumer<Integer> updateOngoingStateReqFunc() {
+        return updateOngoingStateReq;
     }
 
     @Override

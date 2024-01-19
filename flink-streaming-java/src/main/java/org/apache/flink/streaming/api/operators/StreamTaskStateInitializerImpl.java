@@ -66,7 +66,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.OptionalLong;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.stream.StreamSupport;
 
@@ -106,6 +105,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     private final MailboxExecutor mailboxExecutor;
 
+    private final Consumer<Integer> updateOngoingStateReq;
+
     public StreamTaskStateInitializerImpl(Environment environment, StateBackend stateBackend) {
 
         this(
@@ -114,7 +115,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                 TtlTimeProvider.DEFAULT,
                 InternalTimeServiceManagerImpl::create,
                 StreamTaskCancellationContext.alwaysRunning(),
-                null);
+                null,
+                (val) -> {});
     }
 
     @VisibleForTesting
@@ -124,7 +126,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             TtlTimeProvider ttlTimeProvider,
             InternalTimeServiceManager.Provider timeServiceManagerProvider,
             StreamTaskCancellationContext cancellationContext,
-            MailboxExecutor mailboxExecutor) {
+            MailboxExecutor mailboxExecutor,
+            Consumer<Integer> updateOngoingStateReq) {
 
         this.environment = environment;
         this.taskStateManager = Preconditions.checkNotNull(environment.getTaskStateManager());
@@ -133,6 +136,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         this.timeServiceManagerProvider = Preconditions.checkNotNull(timeServiceManagerProvider);
         this.cancellationContext = cancellationContext;
         this.mailboxExecutor = mailboxExecutor;
+        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -358,7 +362,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                                         stateHandles,
                                                         cancelStreamRegistryForRestore,
                                                         managedMemoryFraction,
-                                                        deferStateCallbackToMailbox(mailboxExecutor)),
+                                                        deferStateCallbackToMailbox(mailboxExecutor),
+                                                        updateOngoingStateReq),
                                 backendCloseableRegistry,
                                 logDescription);
 

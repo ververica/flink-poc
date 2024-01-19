@@ -342,7 +342,8 @@ public class AbstractStreamOperatorTestHarness<OUT> implements AutoCloseable {
                 ttlTimeProvider,
                 timeServiceManagerProvider,
                 StreamTaskCancellationContext.alwaysRunning(),
-                Mockito.mock(MailboxExecutor.class));
+                Mockito.mock(MailboxExecutor.class),
+                (val)->{});
     }
 
     public void setStateBackend(StateBackend stateBackend) {

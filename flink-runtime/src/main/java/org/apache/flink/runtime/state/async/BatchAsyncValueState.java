@@ -18,16 +18,21 @@ public class BatchAsyncValueState<K, N, T>
         InternalBatchValueState<K, N, T>>
         implements InternalAsyncValueState<K, N, T> {
 
+    private final Consumer<Integer> updateOngoingStateReq;
+
     BatchAsyncValueState(
             InternalBatchValueState<K, N, T> original,
             InternalKeyContext<K> keyContext,
-            Consumer<RunnableWithException> registerCallBackFunc) {
-        super(original, keyContext, registerCallBackFunc);
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq) {
+        super(original, keyContext, registerCallBackFunc, updateOngoingStateReq);
+        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
     @Override
     public StateFuture<T> value() throws StateUncheckedIOException {
         try {
+            updateOngoingStateReq.accept(1);
             return batchKeyProcessor.get(keyContext.getCurrentKey());
         } catch (IOException e) {
             throw new StateUncheckedIOException(e);
@@ -37,6 +42,7 @@ public class BatchAsyncValueState<K, N, T>
     @Override
     public StateFuture<Void> update(T value) throws StateUncheckedIOException {
         try {
+            updateOngoingStateReq.accept(1);
             return batchKeyProcessor.put(keyContext.getCurrentKey(), value);
         } catch (IOException e) {
             throw new StateUncheckedIOException(e);

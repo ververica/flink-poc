@@ -57,6 +57,10 @@ public interface KeyedStateBackend<K>
         throw new UnsupportedOperationException();
     }
 
+    default Consumer<Integer> updateOngoingStateReqFunc() {
+        throw new UnsupportedOperationException();
+    }
+
     default BatchCacheStateConfig getBatchCacheStateConfig() {
        throw new UnsupportedOperationException();
     }

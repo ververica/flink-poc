@@ -428,6 +428,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                 stateHandles,
                 cancelStreamRegistry,
                 1.0,
+                null,
                 null);
     }
 
@@ -445,7 +446,8 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc)
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq)
             throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded

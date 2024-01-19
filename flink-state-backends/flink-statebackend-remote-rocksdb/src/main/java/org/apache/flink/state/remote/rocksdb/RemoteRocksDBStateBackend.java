@@ -139,7 +139,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc) throws IOException {
+            Consumer<RunnableWithException> registerCallBackFunc,
+            Consumer<Integer> updateOngoingStateReq) throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded
         // we do this explicitly here to have better error handling
@@ -215,6 +216,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                                 keyGroupCompressionDecorator,
                                 cancelStreamRegistry,
                                 registerCallBackFunc)
+                                .setUpdateOngoingStateReqFunc(updateOngoingStateReq)
                         .setEnableIncrementalCheckpointing(isIncrementalCheckpointsEnabled())
                         .setNumberOfTransferingThreads(getNumberOfTransferThreads())
                         .setNativeMetricOptions(
