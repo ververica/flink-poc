@@ -122,6 +122,11 @@ public class RocksIncrementalSnapshotStrategy<K>
     }
 
     @Override
+    public NativeRocksDBSnapshotResources syncPrepareResources(long checkpointId) throws Exception {
+        return generateNativeRocksDBSnapshotResources(checkpointId);
+    }
+
+    @Override
     public SnapshotResultSupplier<KeyedStateHandle> asyncSnapshot(
             NativeRocksDBSnapshotResources snapshotResources,
             long checkpointId,

@@ -34,6 +34,7 @@ import org.apache.flink.contrib.streaming.state.restore.RocksDBRestoreResult;
 import org.apache.flink.contrib.streaming.state.snapshot.RocksDBSnapshotStrategyBase;
 import org.apache.flink.contrib.streaming.state.ttl.RocksDbTtlCompactFiltersManager;
 import org.apache.flink.core.fs.CloseableRegistry;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.BackendBuildingException;
@@ -52,6 +53,8 @@ import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 
 import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
+import org.apache.flink.state.remote.rocksdb.snapshot.RemoteRocksDBIncrementalSnapshotStrategy;
+import org.apache.flink.state.remote.rocksdb.snapshot.RemoteRocksdbStateUploader;
 import org.apache.flink.util.FileUtils;
 import org.apache.flink.util.IOUtils;
 import org.apache.flink.util.ResourceGuard;
@@ -81,8 +84,6 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
-import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
  * Builder class for {@link RemoteRocksDBKeyedStateBackend} which handles all necessary initializations
@@ -358,5 +359,39 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             Consumer<Integer> updateOngoingStateReq) {
         this.updateOngoingStateReq = updateOngoingStateReq;
         return this;
+    }
+
+    private RemoteRocksDBIncrementalSnapshotStrategy<K> initializeSavepointAndCheckpointStrategies(
+            CloseableRegistry cancelStreamRegistry,
+            ResourceGuard rocksDBResourceGuard,
+            LinkedHashMap<String, RocksDBKeyedStateBackend.RocksDbKvStateInfo> kvStateInformation,
+            LinkedHashMap<String, HeapPriorityQueueSnapshotRestoreWrapper<?>> registeredPQStates,
+            int keyGroupPrefixBytes,
+            RocksDB db,
+            UUID backendUID,
+            SortedMap<Long, Collection<IncrementalKeyedStateHandle.HandleAndLocalPath>> materializedSstFiles,
+            long lastCompletedCheckpointId) {
+        RemoteRocksDBIncrementalSnapshotStrategy<K> checkpointSnapshotStrategy;
+        RemoteRocksdbStateUploader stateUploader = new RemoteRocksdbStateUploader(
+                (remoteRocksDBMode == RemoteRocksDBMode.REMOTE ?
+                        new Path(workingDir, instanceBasePath.getPath()) : new Path(instanceBasePath.toURI())),
+                numberOfTransferingThreads);
+        if (enableIncrementalCheckpointing) {
+            checkpointSnapshotStrategy =
+                    new RemoteRocksDBIncrementalSnapshotStrategy<>(
+                            db,
+                            rocksDBResourceGuard,
+                            keySerializerProvider.currentSchemaSerializer(),
+                            kvStateInformation,
+                            keyGroupRange,
+                            stateUploader,
+                            instanceBasePath,
+                            backendUID,
+                            lastCompletedCheckpointId);
+        } else {
+            throw new UnsupportedOperationException("Full checkpointing strategy hasn't been "
+                    + "supported for RemoteRocksdbKeyedStateBackend");
+        }
+        return checkpointSnapshotStrategy;
     }
 }

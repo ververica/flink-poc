@@ -112,12 +112,12 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
     protected final MetricGroup metricGroup;
 
     /** True if incremental checkpointing is enabled. */
-    private boolean enableIncrementalCheckpointing;
+    protected boolean enableIncrementalCheckpointing;
 
     /** RocksDB property-based and statistics-based native metrics options. */
     protected RocksDBNativeMetricOptions nativeMetricOptions;
 
-    private int numberOfTransferingThreads;
+    protected int numberOfTransferingThreads;
     protected long writeBatchSize =
             RocksDBConfigurableOptions.WRITE_BATCH_SIZE.defaultValue().getBytes();
 
@@ -516,7 +516,7 @@ public class RocksDBKeyedStateBackendBuilder<K> extends AbstractKeyedStateBacken
         }
     }
 
-    protected RocksDBSnapshotStrategyBase<K, ?> initializeSavepointAndCheckpointStrategies(
+    private RocksDBSnapshotStrategyBase<K, ?> initializeSavepointAndCheckpointStrategies(
             CloseableRegistry cancelStreamRegistry,
             ResourceGuard rocksDBResourceGuard,
             LinkedHashMap<String, RocksDBKeyedStateBackend.RocksDbKvStateInfo> kvStateInformation,

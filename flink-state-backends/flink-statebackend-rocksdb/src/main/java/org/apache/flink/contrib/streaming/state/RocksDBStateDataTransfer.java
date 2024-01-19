@@ -26,11 +26,11 @@ import java.util.concurrent.Executors;
 import static org.apache.flink.util.concurrent.Executors.newDirectExecutorService;
 
 /** Data transfer base class for {@link RocksDBKeyedStateBackend}. */
-class RocksDBStateDataTransfer implements Closeable {
+public class RocksDBStateDataTransfer implements Closeable {
 
     protected final ExecutorService executorService;
 
-    RocksDBStateDataTransfer(int threadNum) {
+    public RocksDBStateDataTransfer(int threadNum) {
         if (threadNum > 1) {
             executorService =
                     Executors.newFixedThreadPool(

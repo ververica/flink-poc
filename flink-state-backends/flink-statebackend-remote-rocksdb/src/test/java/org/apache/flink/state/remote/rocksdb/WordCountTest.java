@@ -1,8 +1,6 @@
 package org.apache.flink.state.remote.rocksdb;
 
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncValueState;
 import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
@@ -29,47 +27,78 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.flink.configuration.CheckpointingOptions.CHECKPOINTS_DIRECTORY;
+import static org.apache.flink.configuration.CheckpointingOptions.INCREMENTAL_CHECKPOINTS;
 import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE;
 import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR;
 
 public class WordCountTest {
 
-    @ClassRule
-    public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
-            new MiniClusterWithClientResource(
-                    new MiniClusterResourceConfiguration.Builder()
-                            .setConfiguration(getConfiguration())
-                            .setNumberTaskManagers(1)
-                            .setNumberSlotsPerTaskManager(1)
-                            .build());
+//    @ClassRule
+//    public static final MiniClusterWithClientResource MINI_CLUSTER_RESOURCE =
+//            new MiniClusterWithClientResource(
+//                    new MiniClusterResourceConfiguration.Builder()
+//                            .setConfiguration(getCommonConfiguration())
+//                            .setNumberTaskManagers(1)
+//                            .setNumberSlotsPerTaskManager(1)
+//                            .build());
 
-    private static Configuration getConfiguration() {
+    private static Configuration getCommonConfiguration() {
         Configuration config = new Configuration();
-//        OSSTestCredentials.assumeCredentialsAvailable();
-//        config.setString("fs.oss.endpoint", OSSTestCredentials.getOSSEndpoint());
-//        config.setString("fs.oss.accessKeyId", OSSTestCredentials.getOSSAccessKey());
-//        config.setString("fs.oss.accessKeySecret", OSSTestCredentials.getOSSSecretKey());
-        FileSystem.initialize(config, null);
+        config.set(INCREMENTAL_CHECKPOINTS, true);
 
-        config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("1m"));
+        config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("128m"));
         config.set(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE, MemorySize.parse("1m"));
         config.set(StateBackendOptions.STATE_BACKEND,
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
-//        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
-//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-oss-test");
-//        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
-        config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/tmp-remote-test");
-
-        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
+        config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/local-dir");
         return config;
     }
 
     @Test
-    public void testWordCount() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(getConfiguration());
-        DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
+    public void testWordCountWithLocal() throws Exception {
+        Configuration config = getCommonConfiguration();
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "file:///tmp/tmp-test-remote");
+        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
+        FileSystem.initialize(config, null);
+        config.set(CHECKPOINTS_DIRECTORY, "file:///tmp/checkpoint");
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+        env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
+        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        mapper.print().setParallelism(1);
+        env.execute();
+    }
+
+    @Test
+    public void testWordCountWithOSS() throws Exception {
+        Configuration config = getCommonConfiguration();
+        OSSTestCredentials.assumeCredentialsAvailable();
+        config.setString("fs.oss.endpoint", OSSTestCredentials.getOSSEndpoint());
+        config.setString("fs.oss.accessKeyId", OSSTestCredentials.getOSSAccessKey());
+        config.setString("fs.oss.accessKeySecret", OSSTestCredentials.getOSSSecretKey());
+        config.set(CHECKPOINTS_DIRECTORY, "oss://state-bj/checkpoint-remote-wc");
+        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "oss://state-bj/");
+        FileSystem.initialize(config, null);
+
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+        //env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 20, 100, 50).setParallelism(1);
+        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        mapper.print().setParallelism(1);
+        env.execute();
+    }
+
+    @Test
+    public void testWordCountWithHDFS() throws Exception {
+        Configuration config = getCommonConfiguration();
+        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
+        FileSystem.initialize(config, null);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+        //env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
@@ -77,7 +106,7 @@ public class WordCountTest {
 
     @Test
     public void testSingleWordCount() throws Exception {
-        Configuration configuration = getConfiguration();
+        Configuration configuration = getCommonConfiguration();
         configuration.set(ExecutionOptions.BUNDLE_OPERATOR_BATCH_ENABLED, false);
         configuration.set(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER, false);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);

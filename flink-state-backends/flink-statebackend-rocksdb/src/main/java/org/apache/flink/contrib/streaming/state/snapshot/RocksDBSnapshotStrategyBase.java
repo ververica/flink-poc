@@ -77,9 +77,7 @@ import java.util.stream.Collectors;
  */
 public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources>
         implements CheckpointListener,
-                SnapshotStrategy<
-                        KeyedStateHandle,
-                        RocksDBSnapshotStrategyBase.NativeRocksDBSnapshotResources>,
+                SnapshotStrategy<KeyedStateHandle, R>,
                 AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(RocksDBSnapshotStrategyBase.class);
@@ -144,8 +142,7 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
         return description;
     }
 
-    @Override
-    public NativeRocksDBSnapshotResources syncPrepareResources(long checkpointId) throws Exception {
+    public NativeRocksDBSnapshotResources generateNativeRocksDBSnapshotResources(long checkpointId) throws Exception {
 
         final SnapshotDirectory snapshotDirectory = prepareLocalSnapshotDirectory(checkpointId);
         LOG.trace("Local RocksDB checkpoint goes to backup path {}.", snapshotDirectory);
@@ -356,7 +353,7 @@ public abstract class RocksDBSnapshotStrategyBase<K, R extends SnapshotResources
     }
 
     /** A {@link SnapshotResources} for native rocksdb snapshot. */
-    protected static class NativeRocksDBSnapshotResources implements SnapshotResources {
+    public static class NativeRocksDBSnapshotResources implements SnapshotResources {
         @Nonnull protected final SnapshotDirectory snapshotDirectory;
 
         @Nonnull protected final PreviousSnapshot previousSnapshot;
