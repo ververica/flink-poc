@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 
 /** Mock {@link InternalKeyContext}. */
 public class MockInternalKeyContext<K> extends InternalKeyContextImpl<K> {
@@ -33,7 +34,7 @@ public class MockInternalKeyContext<K> extends InternalKeyContextImpl<K> {
     }
 
     public void setCurrentKeyAndKeyGroup(K key) {
-        super.setCurrentKey(key);
+        super.setCurrentKey(new ReferenceCountedKey<>(0, key));
         super.setCurrentKeyGroupIndex(
                 KeyGroupRangeAssignment.assignToKeyGroup(key, getNumberOfKeyGroups()));
     }

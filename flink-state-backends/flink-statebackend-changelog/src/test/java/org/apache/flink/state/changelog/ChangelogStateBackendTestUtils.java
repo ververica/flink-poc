@@ -56,6 +56,7 @@ import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.testutils.statemigration.TestType;
 import org.apache.flink.state.common.ChangelogMaterializationMetricGroup;
@@ -226,26 +227,26 @@ public class ChangelogStateBackendTestUtils {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-            keyedBackend.setCurrentKey(1);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             state.update(new StateBackendTestBase.TestPojo("u1", 1));
 
-            keyedBackend.setCurrentKey(2);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             state.update(new StateBackendTestBase.TestPojo("u2", 2));
 
             periodicMaterializationManager.triggerMaterialization();
 
-            keyedBackend.setCurrentKey(2);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             state.update(new StateBackendTestBase.TestPojo("u2", 22));
 
-            keyedBackend.setCurrentKey(3);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
             state.update(new StateBackendTestBase.TestPojo("u3", 3));
 
             periodicMaterializationManager.triggerMaterialization();
 
-            keyedBackend.setCurrentKey(4);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 4));
             state.update(new StateBackendTestBase.TestPojo("u4", 4));
 
-            keyedBackend.setCurrentKey(2);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             state.update(new StateBackendTestBase.TestPojo("u2", 222));
 
             KeyedStateHandle snapshot =
@@ -278,13 +279,13 @@ public class ChangelogStateBackendTestUtils {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-            keyedBackend.setCurrentKey(1);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             assertEquals(new StateBackendTestBase.TestPojo("u1", 1), state.value());
 
-            keyedBackend.setCurrentKey(2);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             assertEquals(new StateBackendTestBase.TestPojo("u2", 222), state.value());
 
-            keyedBackend.setCurrentKey(3);
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
             assertEquals(new StateBackendTestBase.TestPojo("u3", 3), state.value());
         } finally {
             IOUtils.closeQuietly(keyedBackend);

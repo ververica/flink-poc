@@ -25,6 +25,7 @@ import org.apache.flink.api.common.typeutils.base.IntSerializer;
 import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.VoidNamespace;
 
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -46,7 +47,7 @@ class LatencyTrackingValueStateTest extends LatencyTrackingStateTestBase<Integer
 
     @Override
     void setCurrentKey(AbstractKeyedStateBackend<Integer> keyedBackend) {
-        keyedBackend.setCurrentKey(1);
+        keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
     }
 
     @Test

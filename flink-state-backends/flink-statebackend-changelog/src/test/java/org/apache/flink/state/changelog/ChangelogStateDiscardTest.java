@@ -43,6 +43,7 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TestLocalRecoveryConfig;
 import org.apache.flink.runtime.state.TestingStreamStateHandle;
 import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.changelog.StateChangelogStorage;
 import org.apache.flink.runtime.state.changelog.StateChangelogWriter;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackendBuilder;
@@ -309,7 +310,7 @@ public class ChangelogStateDiscardTest {
 
     private static void changeAndRandomState(ChangelogKeyedStateBackend<String> backend)
             throws Exception {
-        backend.setCurrentKey(randomString());
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, randomString()));
         backend.getPartitionedState(
                         "ns",
                         StringSerializer.INSTANCE,

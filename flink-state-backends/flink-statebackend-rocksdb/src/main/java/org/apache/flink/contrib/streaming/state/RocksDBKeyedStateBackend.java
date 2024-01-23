@@ -55,6 +55,7 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategyRunner;
 import org.apache.flink.runtime.state.StateSnapshotTransformer.StateSnapshotTransformFactory;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSetFactory;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapper;
@@ -426,12 +427,12 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
     }
 
     @Override
-    public void setCurrentKey(K newKey) {
+    public void setCurrentKey(ReferenceCountedKey<K> newKey) {
         setKeyContext(newKey);
-        sharedRocksKeyBuilder.setKeyAndKeyGroup(getCurrentKey(), getCurrentKeyGroupIndex());
+        sharedRocksKeyBuilder.setKeyAndKeyGroup(getCurrentKey().getRawKey(), getCurrentKeyGroupIndex());
     }
 
-    public void setKeyContext(K newKey) {
+    public void setKeyContext(ReferenceCountedKey<K> newKey) {
         super.setCurrentKey(newKey);
     }
 

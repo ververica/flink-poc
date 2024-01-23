@@ -19,6 +19,7 @@ package org.apache.flink.state.changelog;
 
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.changelog.SequenceNumber;
 import org.apache.flink.runtime.state.changelog.StateChangelogWriter;
 import org.apache.flink.runtime.state.heap.InternalKeyContextImpl;
@@ -68,7 +69,7 @@ abstract class StateChangeLoggerTestBase<Namespace> {
             StateChangeLogger<String, Namespace> logger,
             InternalKeyContextImpl<String> keyContext)
             throws IOException {
-        keyContext.setCurrentKey(element);
+        keyContext.setCurrentKey(new ReferenceCountedKey<>(0, element));
         Namespace namespace = getNamespace(element);
         switch (op) {
             case ADD:

@@ -54,6 +54,7 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.streaming.api.graph.StreamConfig;
@@ -383,7 +384,7 @@ public class StreamingRuntimeContextTest {
                                                         new UnregisteredMetricsGroup(),
                                                         Collections.emptyList(),
                                                         new CloseableRegistry());
-                                backend.setCurrentKey(0);
+                                backend.setCurrentKey(new ReferenceCountedKey<>(0, 0));
                                 return backend.getPartitionedState(
                                         VoidNamespace.INSTANCE,
                                         VoidNamespaceSerializer.INSTANCE,
@@ -447,7 +448,7 @@ public class StreamingRuntimeContextTest {
                                                         new UnregisteredMetricsGroup(),
                                                         Collections.emptyList(),
                                                         new CloseableRegistry());
-                                backend.setCurrentKey(0);
+                                backend.setCurrentKey(new ReferenceCountedKey<>(0, 0));
                                 return backend.getPartitionedState(
                                         VoidNamespace.INSTANCE,
                                         VoidNamespaceSerializer.INSTANCE,

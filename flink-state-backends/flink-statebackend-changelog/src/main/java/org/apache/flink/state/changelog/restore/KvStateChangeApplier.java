@@ -19,6 +19,7 @@ package org.apache.flink.state.changelog.restore;
 
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.internal.InternalMergingState;
@@ -39,7 +40,8 @@ abstract class KvStateChangeApplier<K, N> implements StateChangeApplier {
     @Override
     public void apply(StateChangeOperation operation, DataInputView in) throws Exception {
         K key = getState().getKeySerializer().deserialize(in);
-        keyContext.setCurrentKey(key);
+        // todo(shuazi)
+        keyContext.setCurrentKey(new ReferenceCountedKey<>(0, key));
         keyContext.setCurrentKeyGroupIndex(
                 KeyGroupRangeAssignment.assignToKeyGroup(key, keyContext.getNumberOfKeyGroups()));
         getState().setCurrentNamespace(getState().getNamespaceSerializer().deserialize(in));

@@ -19,6 +19,7 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.IOUtils;
@@ -72,64 +73,64 @@ public class RemoteRocksDBStateBackendTest {
             List<Integer> leftKeys = Arrays.asList(1, 2, 3, 4, 5);
             List<Integer> rightKeys = Arrays.asList(5, 6, 7, 8);
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             leftState.update("aa");
             assertNull(rightState.value());
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             rightState.update("bb");
             assertNull(leftState.value());
 
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0,5));
             leftState.update("cc");
             assertEquals("bb", rightState.value());
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             rightState.update("ff");
             assertEquals("cc", leftState.value());
 
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
             assertEquals("aa", leftState.value());
             assertNull(rightState.value());
 
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             assertEquals("cc", leftState.value());
             assertEquals("ff", rightState.value());
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             assertEquals("ff", rightState.value());
             assertEquals("cc", leftState.value());
 
             backend.clearCurrentKeysCache();
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(7);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 7));
             rightState.update("dd");
             assertNull(leftState.value());
 
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             assertEquals("aa", leftState.value());
             assertNull(rightState.value());
 
             backend.setCurrentKeys(leftKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             assertEquals("cc", leftState.value());
             assertEquals("ff", rightState.value());
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             assertEquals("ff", rightState.value());
             assertEquals("cc", leftState.value());
 
             backend.setCurrentKeys(rightKeys);
-            backend.setCurrentKey(7);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 7));
             assertEquals("dd", rightState.value());
         } finally {
             IOUtils.closeQuietly(backend);
@@ -150,19 +151,19 @@ public class RemoteRocksDBStateBackendTest {
             List<Integer> keys = Arrays.asList(1, 2, 3, 4, 5);
             backend.setCurrentKeys(keys);
             for (Integer key : keys) {
-                backend.setCurrentKey(key);
+                backend.setCurrentKey(new ReferenceCountedKey<>(0, key));
                 assertNull(state.value());
             }
 
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             state.update("aa");
             assertEquals("aa", state.value());
 
-            backend.setCurrentKey(4);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 4));
             state.update(null);
             assertNull(state.value());
 
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             state.update("bb");
             assertEquals("bb", state.value());
 
@@ -171,19 +172,19 @@ public class RemoteRocksDBStateBackendTest {
             keys = Arrays.asList(2, 4, 5, 7, 8);
             backend.setCurrentKeys(keys);
 
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             assertEquals("aa", state.value());
 
-            backend.setCurrentKey(4);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 4));
             assertNull(state.value());
 
-            backend.setCurrentKey(5);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
             assertEquals("bb", state.value());
 
-            backend.setCurrentKey(7);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 7));
             assertNull(state.value());
 
-            backend.setCurrentKey(8);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 8));
             assertNull(state.value());
         } finally {
             IOUtils.closeQuietly(backend);
@@ -299,7 +300,7 @@ public class RemoteRocksDBStateBackendTest {
             TypeSerializer<String> valueSerializer = kvId.getSerializer();
 
             // some modifications to the state
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             assertNull(state.value());
 //            assertNull(
 //                    getSerializedValue(
@@ -310,7 +311,7 @@ public class RemoteRocksDBStateBackendTest {
 //                            namespaceSerializer,
 //                            valueSerializer));
             state.update("1");
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             assertNull(state.value());
 //            assertNull(
 //                    getSerializedValue(
@@ -321,7 +322,7 @@ public class RemoteRocksDBStateBackendTest {
 //                            namespaceSerializer,
 //                            valueSerializer));
             state.update("2");
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             assertEquals("1", state.value());
 //            assertEquals(
 //                    "1",
@@ -334,15 +335,15 @@ public class RemoteRocksDBStateBackendTest {
 //                            valueSerializer));
 
             // make some more modifications
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             state.update("u1");
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             state.update("u2");
-            backend.setCurrentKey(3);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
             state.update("u3");
 
             // validate the original state
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             assertEquals("u1", state.value());
 //            assertEquals(
 //                    "u1",
@@ -353,7 +354,7 @@ public class RemoteRocksDBStateBackendTest {
 //                            VoidNamespace.INSTANCE,
 //                            namespaceSerializer,
 //                            valueSerializer));
-            backend.setCurrentKey(2);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
             assertEquals("u2", state.value());
 //            assertEquals(
 //                    "u2",
@@ -364,7 +365,7 @@ public class RemoteRocksDBStateBackendTest {
 //                            VoidNamespace.INSTANCE,
 //                            namespaceSerializer,
 //                            valueSerializer));
-            backend.setCurrentKey(3);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
             assertEquals("u3", state.value());
 //            assertEquals(
 //                    "u3",

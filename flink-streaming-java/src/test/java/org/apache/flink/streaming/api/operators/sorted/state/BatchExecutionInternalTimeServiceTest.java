@@ -28,6 +28,7 @@ import org.apache.flink.runtime.state.AbstractKeyedStateBackend;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.streaming.api.operators.InternalTimeServiceManager;
@@ -147,7 +148,7 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
                         new VoidNamespaceSerializer(),
                         LambdaTrigger.eventTimeTrigger(timer -> timers.add(timer.getTimestamp())));
 
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 123);
 
         // advancing the watermark should not fire timers
@@ -156,7 +157,7 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 150);
 
         // changing the current key fires all timers
-        keyedStatedBackend.setCurrentKey(2);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
 
         assertThat(timers, equalTo(Collections.singletonList(150L)));
     }
@@ -183,9 +184,9 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
                         new VoidNamespaceSerializer(),
                         LambdaTrigger.eventTimeTrigger(timer -> timers.add(timer.getTimestamp())));
 
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 123);
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
 
         assertThat(timers, equalTo(Collections.emptyList()));
     }
@@ -217,7 +218,7 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
         eventTimeTrigger.setTimerService(timerService);
 
         assertThat(timerService.currentWatermark(), equalTo(Long.MIN_VALUE));
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 123);
         assertThat(timerService.currentWatermark(), equalTo(Long.MIN_VALUE));
 
@@ -226,7 +227,7 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
         assertThat(timerService.currentWatermark(), equalTo(Long.MIN_VALUE));
 
         // changing the current key fires all timers
-        keyedStatedBackend.setCurrentKey(2);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
         assertThat(timerService.currentWatermark(), equalTo(Long.MIN_VALUE));
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 124);
 
@@ -260,13 +261,13 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
                         LambdaTrigger.processingTimeTrigger(
                                 timer -> timers.add(timer.getTimestamp())));
 
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerProcessingTimeTimer(VoidNamespace.INSTANCE, 150);
 
         // we should never register physical timers
         assertThat(processingTimeService.getNumActiveTimers(), equalTo(0));
         // changing the current key fires all timers
-        keyedStatedBackend.setCurrentKey(2);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
 
         assertThat(timers, equalTo(Collections.singletonList(150L)));
     }
@@ -299,13 +300,13 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
                         "test", KEY_SERIALIZER, new VoidNamespaceSerializer(), trigger);
         trigger.setTimerService(timerService);
 
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerEventTimeTimer(VoidNamespace.INSTANCE, 150);
 
         // we should never register physical timers
         assertThat(processingTimeService.getNumActiveTimers(), equalTo(0));
         // changing the current key fires all timers
-        keyedStatedBackend.setCurrentKey(2);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
 
         // We check that the timer from the callback is ignored
         assertThat(timers, equalTo(Collections.singletonList(150L)));
@@ -339,13 +340,13 @@ public class BatchExecutionInternalTimeServiceTest extends TestLogger {
                         "test", KEY_SERIALIZER, new VoidNamespaceSerializer(), trigger);
         trigger.setTimerService(timerService);
 
-        keyedStatedBackend.setCurrentKey(1);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         timerService.registerProcessingTimeTimer(VoidNamespace.INSTANCE, 150);
 
         // we should never register physical timers
         assertThat(processingTimeService.getNumActiveTimers(), equalTo(0));
         // changing the current key fires all timers
-        keyedStatedBackend.setCurrentKey(2);
+        keyedStatedBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
 
         // We check that the timer from the callback is ignored
         assertThat(timers, equalTo(Collections.singletonList(150L)));

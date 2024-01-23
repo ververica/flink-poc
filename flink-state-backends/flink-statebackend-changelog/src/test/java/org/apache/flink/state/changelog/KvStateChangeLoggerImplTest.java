@@ -21,6 +21,7 @@ import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.InternalKeyContextImpl;
 
 import java.io.IOException;
@@ -67,7 +68,7 @@ public class KvStateChangeLoggerImplTest extends StateChangeLoggerTestBase<Strin
             InternalKeyContextImpl<String> keyContext)
             throws IOException {
         if (op == MERGE_NS) {
-            keyContext.setCurrentKey(element);
+            keyContext.setCurrentKey(new ReferenceCountedKey<>(0, element));
             ((KvStateChangeLogger<String, String>) logger)
                     .namespacesMerged(element, Collections.emptyList());
             return Optional.of(Tuple2.of(keyContext.getCurrentKeyGroupIndex(), op));

@@ -36,6 +36,7 @@ import org.apache.flink.runtime.operators.testutils.DummyEnvironment;
 import org.apache.flink.runtime.query.KvStateRegistry;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateBackend;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.runtime.state.internal.InternalMergingState;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
@@ -92,7 +93,7 @@ public class TriggerTestHarness<T, W extends Window> {
                                 new CloseableRegistry());
         this.stateBackend = stateBackend;
 
-        this.stateBackend.setCurrentKey(KEY);
+        this.stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, KEY));
 
         this.internalTimerService =
                 new TestInternalTimerService<>(

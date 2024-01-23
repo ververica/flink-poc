@@ -33,7 +33,7 @@ public class BatchAsyncValueState<K, N, T>
     public StateFuture<T> value() throws StateUncheckedIOException {
         try {
             updateOngoingStateReq.accept(1);
-            return batchKeyProcessor.get(keyContext.getCurrentKey());
+            return batchKeyProcessor.get(keyContext.getCurrentKey().getRawKey());
         } catch (IOException e) {
             throw new StateUncheckedIOException(e);
         }
@@ -43,7 +43,7 @@ public class BatchAsyncValueState<K, N, T>
     public StateFuture<Void> update(T value) throws StateUncheckedIOException {
         try {
             updateOngoingStateReq.accept(1);
-            return batchKeyProcessor.put(keyContext.getCurrentKey(), value);
+            return batchKeyProcessor.put(keyContext.getCurrentKey().getRawKey(), value);
         } catch (IOException e) {
             throw new StateUncheckedIOException(e);
         }
@@ -51,6 +51,6 @@ public class BatchAsyncValueState<K, N, T>
 
     @Override
     public void commit(){
-        batchKeyProcessor.endKeyProcess(keyContext.getCurrentKey());
+        batchKeyProcessor.endKeyProcess(keyContext.getCurrentKey().getRawKey());
     }
 }

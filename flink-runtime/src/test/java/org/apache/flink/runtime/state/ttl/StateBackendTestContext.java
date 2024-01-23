@@ -35,6 +35,7 @@ import org.apache.flink.runtime.state.SharedStateRegistry;
 import org.apache.flink.runtime.state.SharedStateRegistryImpl;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.util.Preconditions;
 
@@ -169,7 +170,7 @@ public abstract class StateBackendTestContext {
     public void setCurrentKey(String key) {
         //noinspection resource
         Preconditions.checkNotNull(keyedStateBackend, "keyed backend is not initialised");
-        keyedStateBackend.setCurrentKey(key);
+        keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, key));
     }
 
     @SuppressWarnings("unchecked")
