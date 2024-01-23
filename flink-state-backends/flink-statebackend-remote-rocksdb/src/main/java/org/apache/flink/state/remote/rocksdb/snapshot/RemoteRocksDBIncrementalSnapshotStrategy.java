@@ -133,7 +133,7 @@ public class RemoteRocksDBIncrementalSnapshotStrategy<K>
         RocksDB.LiveFiles liveFiles = db.getLiveFiles(true);
         return new RemoteRocksdbSnapshotResource(
                 liveFiles,
-                previousSnapshot,
+                previousSnapshot != null ? previousSnapshot : Collections.emptyMap(),
                 stateMetaInfoSnapshots,
                 () -> {
                     db.enableFileDeletions(false);
