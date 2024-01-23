@@ -6,7 +6,6 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -15,7 +14,7 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
 
     private CompletableFuture<V> future;
 
-    private final K currentKey;
+    private ReferenceCountedKey<K> currentKey;
 
     private final InternalKeyContext<K> keyContext;
 
@@ -23,7 +22,7 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
 
     private final Consumer<Integer> updateOngoingStateReq;
 
-    public StateFutureImpl(K currentKey,
+    public StateFutureImpl(ReferenceCountedKey<K> currentKey,
                            InternalKeyContext<K> internalKeyContext,
                            Consumer<RunnableWithException> registerMailBoxCallBackFunc,
                            Consumer<Integer> updateOngoingStateReq) {
@@ -41,25 +40,30 @@ public class StateFutureImpl<K, V> implements StateFuture<V> {
 
     @Override
     public <R> StateFuture<R> then(Function<? super V, ? extends R> action) {
+        currentKey.retain();
         StateFutureImpl<K, R> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc, updateOngoingStateReq);
         future.thenAccept(value -> {
             updateOngoingStateReq.accept(-1);
             registerMailBoxCallBackFunc.accept(() -> {
-            keyContext.setCurrentKey(currentKey, true);
-            R result = action.apply(value);
-            stateFuture.complete(result);
-        });});
+                keyContext.setCurrentKey(currentKey, true);
+                R result = action.apply(value);
+                stateFuture.complete(result);
+            });
+            currentKey.release();
+        });
         return stateFuture;
     }
 
     @Override
     public StateFuture<Void> then(Consumer<? super V> action) {
+        currentKey.retain();
         StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc, updateOngoingStateReq);
         future.thenAccept(value -> {
-            updateOngoingStateReq.accept(-1);
             registerMailBoxCallBackFunc.accept(() -> {
+                updateOngoingStateReq.accept(-1);
                 keyContext.setCurrentKey(currentKey, true);
                 action.accept(value);
+                currentKey.release();
                 stateFuture.complete(null);
             });
         });

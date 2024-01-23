@@ -27,6 +27,7 @@ import org.apache.flink.contrib.streaming.state.iterator.RocksStateKeysAndNamesp
 import org.apache.flink.core.memory.DataOutputSerializer;
 import org.apache.flink.runtime.state.CompositeKeySerializationUtils;
 
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -80,7 +81,7 @@ public class RocksDBRocksStateKeysAndNamespacesIteratorTest {
 
             // insert record
             for (int i = 0; i < 1000; ++i) {
-                keyedStateBackend.setCurrentKey(getKeyFunc.apply(i));
+                keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, getKeyFunc.apply(i)));
                 testState.update(String.valueOf(i));
             }
 

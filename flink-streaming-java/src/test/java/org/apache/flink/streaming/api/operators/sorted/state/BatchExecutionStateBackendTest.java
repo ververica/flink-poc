@@ -39,6 +39,7 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.StateBackendTestBase;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.internal.InternalAggregatingState;
 import org.apache.flink.runtime.state.internal.InternalListState;
 import org.apache.flink.runtime.state.internal.InternalReducingState;
@@ -102,7 +103,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             assertNull(state.get());
 
             expectedException.expect(NullPointerException.class);
@@ -130,7 +131,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             assertNull(state.get());
 
             expectedException.expect(NullPointerException.class);
@@ -163,7 +164,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             assertNull(state.get());
 
             expectedException.expect(NullPointerException.class);
@@ -191,7 +192,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             assertNull(state.get());
 
             expectedException.expect(NullPointerException.class);
@@ -224,7 +225,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             assertNull(state.get());
 
             expectedException.expect(NullPointerException.class);
@@ -247,7 +248,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertNull(state.get());
             assertNull(state.get());
             state.addAll(Collections.emptyList());
@@ -287,7 +288,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - abc spreads the values over three namespaces
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.add(33L);
             state.add(55L);
@@ -305,7 +306,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
 
             // make sure all lists / maps are cleared
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -331,7 +332,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - def spreads the values over two namespaces (one empty)
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(44L);
@@ -341,14 +342,14 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(55L);
             state.add(33L);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertThat(state.get(), containsInAnyOrder(11L, 22L, 33L, 44L, 55L));
 
             // make sure all lists / maps are cleared
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -374,14 +375,14 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - ghi is empty
 
-            keyedBackend.setCurrentKey("ghi");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "ghi"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertNull(state.get());
 
             // make sure all lists / maps are cleared
 
-            keyedBackend.setCurrentKey("ghi");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "ghi"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -407,7 +408,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - jkl has all elements already in the target namespace
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(22L);
@@ -415,12 +416,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertThat(state.get(), containsInAnyOrder(11L, 22L, 33L, 44L, 55L));
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -446,7 +447,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - mno has all elements already in one source namespace
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace3);
             state.add(11L);
             state.add(22L);
@@ -454,14 +455,14 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertThat(state.get(), containsInAnyOrder(11L, 22L, 33L, 44L, 55L));
 
             // make sure all lists / maps are cleared
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -480,28 +481,28 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertNull(state.get());
             state.add(17L);
             state.add(11L);
             assertEquals(28L, state.get().longValue());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertEquals(28L, state.get().longValue());
             state.clear();
             assertNull(state.get());
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertNull(state.get());
             state.add(1L);
             state.add(2L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             state.add(3L);
             state.add(2L);
             state.add(1L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertEquals(9L, state.get().longValue());
         }
     }
@@ -527,7 +528,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - abc spreads the values over three namespaces
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.add(33L);
             state.add(55L);
@@ -539,12 +540,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.setCurrentNamespace(namespace3);
             state.add(44L);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -572,7 +573,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - def spreads the values over two namespaces (one empty)
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(44L);
@@ -582,12 +583,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(55L);
             state.add(33L);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -613,7 +614,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - ghi is empty
 
-            keyedBackend.setCurrentKey("ghi");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "ghi"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertNull(state.get());
@@ -641,7 +642,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - jkl has all elements already in the target namespace
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(22L);
@@ -649,12 +650,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -682,7 +683,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - mno has all elements already in one source namespace
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace3);
             state.add(11L);
             state.add(22L);
@@ -690,12 +691,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -715,31 +716,31 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertNull(state.get());
             state.add(17L);
             state.add(11L);
             assertEquals(28L, state.get().longValue());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertEquals(28L, state.get().longValue());
             state.clear();
             assertNull(state.get());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertNull(state.get());
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertNull(state.get());
             state.add(1L);
             state.add(2L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             state.add(3L);
             state.add(2L);
             state.add(1L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertEquals(9L, state.get().longValue());
             state.clear();
             assertNull(state.get());
@@ -768,7 +769,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - abc spreads the values over three namespaces
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.add(33L);
             state.add(55L);
@@ -780,12 +781,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.setCurrentNamespace(namespace3);
             state.add(44L);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -813,7 +814,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - def spreads the values over two namespaces (one empty)
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(44L);
@@ -823,12 +824,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(55L);
             state.add(33L);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -854,7 +855,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - ghi is empty
 
-            keyedBackend.setCurrentKey("ghi");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "ghi"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertNull(state.get());
@@ -883,7 +884,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - jkl has all elements already in the target namespace
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(22L);
@@ -891,12 +892,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -925,7 +926,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - mno has all elements already in one source namespace
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace3);
             state.add(11L);
             state.add(22L);
@@ -933,12 +934,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -958,28 +959,28 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                     keyedBackend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescr);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertNull(state.get());
             state.add(17L);
             state.add(11L);
             assertEquals(28L, state.get().longValue());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             assertEquals(28L, state.get().longValue());
             state.clear();
             assertNull(state.get());
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertNull(state.get());
             state.add(1L);
             state.add(2L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             state.add(3L);
             state.add(2L);
             state.add(1L);
 
-            keyedBackend.setCurrentKey("g");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "g"));
             assertEquals(9L, state.get().longValue());
             state.clear();
             assertNull(state.get());
@@ -1008,7 +1009,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - abc spreads the values over three namespaces
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.add(33L);
             state.add(55L);
@@ -1020,12 +1021,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.setCurrentNamespace(namespace3);
             state.add(44L);
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("abc");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "abc"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -1053,7 +1054,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - def spreads the values over two namespaces (one empty)
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(44L);
@@ -1063,12 +1064,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(55L);
             state.add(33L);
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("def");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "def"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -1094,7 +1095,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - ghi is empty
 
-            keyedBackend.setCurrentKey("ghi");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "ghi"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertNull(state.get());
@@ -1123,7 +1124,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - jkl has all elements already in the target namespace
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.add(11L);
             state.add(22L);
@@ -1131,12 +1132,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("jkl");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "jkl"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -1165,7 +1166,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             // populate the different namespaces
             //  - mno has all elements already in one source namespace
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace3);
             state.add(11L);
             state.add(22L);
@@ -1173,12 +1174,12 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             state.add(44L);
             state.add(55L);
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.mergeNamespaces(namespace1, asList(namespace2, namespace3));
             state.setCurrentNamespace(namespace1);
             assertEquals(expectedResult, state.get());
 
-            keyedBackend.setCurrentKey("mno");
+            keyedBackend.setCurrentKey(new ReferenceCountedKey<>(0, "mno"));
             state.setCurrentNamespace(namespace1);
             state.clear();
             assertNull(state.get());
@@ -1197,7 +1198,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             MapState<Integer, Long> state =
                     backend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             assertTrue(state.isEmpty());
 
             int stateSize = 1024;
@@ -1233,7 +1234,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
             MapState<Integer, Long> state =
                     backend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             int stateSize = 4096;
             for (int i = 0; i < stateSize; i++) {
                 state.put(i, i * 2L);
@@ -1280,7 +1281,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                 backend.getPartitionedState(
                         VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-        backend.setCurrentKey(1);
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         assertNull(state.value());
 
         state.update("Ciao");
@@ -1304,7 +1305,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                 backend.getPartitionedState(
                         VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-        backend.setCurrentKey(1);
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         assertEquals("Hello", state.value());
 
         state.update("Ciao");
@@ -1329,7 +1330,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                 backend.getPartitionedState(
                         VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-        backend.setCurrentKey(1);
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         assertNull(state.get());
 
         state.add("Ciao");
@@ -1353,7 +1354,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                 backend.getPartitionedState(
                         VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-        backend.setCurrentKey(1);
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         assertNull(state.get());
 
         state.update(Arrays.asList("Ciao", "Bello"));
@@ -1378,7 +1379,7 @@ public class BatchExecutionStateBackendTest extends TestLogger {
                 backend.getPartitionedState(
                         VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-        backend.setCurrentKey(1);
+        backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         assertNotNull(state.entries());
         assertFalse(state.entries().iterator().hasNext());
 

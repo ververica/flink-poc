@@ -152,7 +152,7 @@ public class MockKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                 () ->
                         stateValues
                                 .computeIfAbsent(stateDesc.getName(), n -> new HashMap<>())
-                                .computeIfAbsent(getCurrentKey(), k -> new HashMap<>());
+                                .computeIfAbsent(getCurrentKey().getRawKey(), k -> new HashMap<>());
         return state;
     }
 

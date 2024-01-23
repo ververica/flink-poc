@@ -36,6 +36,7 @@ import org.apache.flink.runtime.state.PriorityComparator;
 import org.apache.flink.runtime.state.SavepointResources;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.util.FlinkRuntimeException;
@@ -87,7 +88,7 @@ public class BatchExecutionKeyedStateBackend<K> implements CheckpointableKeyedSt
                                     (StateFactory) BatchExecutionKeyReducingState::create))
                     .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
 
-    private K currentKey = null;
+    private ReferenceCountedKey<K> currentKey = null;
     private final TypeSerializer<K> keySerializer;
     private final List<KeySelectionListener<K>> keySelectionListeners = new ArrayList<>();
     private final Map<String, State> states = new HashMap<>();
@@ -106,9 +107,9 @@ public class BatchExecutionKeyedStateBackend<K> implements CheckpointableKeyedSt
     }
 
     @Override
-    public void setCurrentKey(K newKey) {
+    public void setCurrentKey(ReferenceCountedKey<K> newKey) {
         if (!Objects.equals(newKey, currentKey)) {
-            notifyKeySelected(newKey);
+            notifyKeySelected(newKey.getRawKey());
             for (State value : states.values()) {
                 ((AbstractBatchExecutionKeyState<?, ?, ?>) value).clearAllNamespaces();
             }
@@ -122,7 +123,7 @@ public class BatchExecutionKeyedStateBackend<K> implements CheckpointableKeyedSt
     }
 
     @Override
-    public K getCurrentKey() {
+    public ReferenceCountedKey<K> getCurrentKey() {
         return currentKey;
     }
 

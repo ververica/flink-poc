@@ -53,6 +53,7 @@ import org.apache.flink.runtime.state.StateInitializationContextImpl;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.util.CloseableIterable;
 import org.apache.flink.util.IOUtils;
 
@@ -380,7 +381,7 @@ public class StreamOperatorStateHandler {
                 @SuppressWarnings("rawtypes")
                 CheckpointableKeyedStateBackend rawBackend = keyedStateBackend;
 
-                rawBackend.setCurrentKey(key);
+                rawBackend.setCurrentKey((ReferenceCountedKey<Object>)key);
             } catch (Exception e) {
                 throw new RuntimeException(
                         "Exception occurred while setting the current key context.", e);

@@ -26,6 +26,7 @@ import org.apache.flink.runtime.operators.testutils.MockEnvironmentBuilder;
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.streaming.api.operators.TimerHeapInternalTimer;
 import org.apache.flink.streaming.api.operators.TimerSerializer;
 
@@ -86,7 +87,7 @@ public class RocksDBStateOptionTest {
                             VoidNamespaceSerializer.INSTANCE,
                             stateDescriptor);
 
-            keyedStateBackend.setCurrentKey(1);
+            keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             Map<Integer, Long> expectedResult = new HashMap<>();
             for (int i = 0; i < 100; i++) {
                 long uv = ThreadLocalRandom.current().nextLong();

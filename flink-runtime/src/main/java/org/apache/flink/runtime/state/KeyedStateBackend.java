@@ -24,6 +24,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.util.Disposable;
 import org.apache.flink.util.function.RunnableWithException;
 
@@ -44,10 +45,12 @@ public interface KeyedStateBackend<K>
      *
      * @param newKey The new current key.
      */
-    void setCurrentKey(K newKey);
+    void setCurrentKey(ReferenceCountedKey<K> newKey);
 
-    /** @return Current key. */
-    K getCurrentKey();
+    /**
+     * @return Current key.
+     */
+    ReferenceCountedKey<K> getCurrentKey();
 
     default boolean isSupportBatchInterfaces() {
         return false;

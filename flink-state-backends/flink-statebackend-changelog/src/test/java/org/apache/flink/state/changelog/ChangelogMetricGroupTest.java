@@ -33,6 +33,7 @@ import org.apache.flink.runtime.state.StateBackendTestUtils.SerializableFunction
 import org.apache.flink.runtime.state.TestTaskStateManager;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.runtime.state.memory.MemCheckpointStreamFactory;
 import org.apache.flink.runtime.state.storage.JobManagerCheckpointStorage;
@@ -96,7 +97,7 @@ public class ChangelogMetricGroupTest {
         assertEquals(0L, lastFullSizeOfNonMaterializationGauge.getValue().longValue());
         assertEquals(0L, lastIncSizeOfNonMaterializationGauge.getValue().longValue());
 
-        changelogKeyedStateBackend.setCurrentKey(1);
+        changelogKeyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         state.update(1);
         periodicMaterializationManager.triggerMaterialization();
         runSnapshot(2L);
@@ -114,7 +115,7 @@ public class ChangelogMetricGroupTest {
         assertEquals(0L, lastFullSizeOfNonMaterialization.longValue());
         assertEquals(0L, lastIncSizeOfNonMaterialization.longValue());
 
-        changelogKeyedStateBackend.setCurrentKey(2);
+        changelogKeyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, 2));
         state.update(2);
         runSnapshot(3L);
         // The materialization size will not be updated if no materialization triggered.
@@ -131,7 +132,7 @@ public class ChangelogMetricGroupTest {
     @Test
     public void testFailedMaterialization() throws Exception {
         setup(snapshotResult -> ExceptionallyDoneFuture.of(new RuntimeException()));
-        changelogKeyedStateBackend.setCurrentKey(1);
+        changelogKeyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
         state.update(1);
         assertEquals(-1L, lastDurationOfMaterializationGauge.getValue().longValue());
         periodicMaterializationManager.triggerMaterialization();

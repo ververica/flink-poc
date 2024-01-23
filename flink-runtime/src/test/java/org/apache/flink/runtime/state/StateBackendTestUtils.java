@@ -28,6 +28,7 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.function.FunctionWithException;
@@ -107,7 +108,7 @@ public class StateBackendTestUtils {
                     cancelStreamRegistry,
                     delegatedKeyedStateBackend.getKeyContext()) {
                 @Override
-                public void setCurrentKey(K newKey) {
+                public void setCurrentKey(ReferenceCountedKey<K> newKey) {
                     delegatedKeyedStateBackend.setCurrentKey(newKey);
                 }
 

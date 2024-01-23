@@ -5,6 +5,7 @@ import org.apache.flink.api.common.state.async.AsyncValueState;
 import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.MemorySize;
@@ -65,7 +66,7 @@ public class WordCountTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
         env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
-        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        DataStream<Tuple2<String, Long>> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
     }
@@ -85,7 +86,7 @@ public class WordCountTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
         //env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 20, 100, 50).setParallelism(1);
-        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        DataStream<Tuple2<String, Long>> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
     }
@@ -99,7 +100,7 @@ public class WordCountTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
         //env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
-        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        DataStream<Tuple2<String, Long>> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
     }
@@ -111,42 +112,60 @@ public class WordCountTest {
         configuration.set(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER, false);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
         DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
-        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        DataStream<Tuple2<String, Long>> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
     }
 
-    public static class MixedFlatMapper extends RichFlatMapFunction<String, Long> {
+    public static class MixedFlatMapper extends RichFlatMapFunction<String, Tuple2<String, Long>> {
 
         private transient AsyncValueState<Integer> asyncWordCounter;
 
         public MixedFlatMapper() {
         }
 
-        @Override
-        public void flatMap(String in, Collector<Long> out) throws IOException {
-            asyncWordCounter.value().then(currentValue -> {
-                if (currentValue != null) {
-                    asyncWordCounter.update(currentValue + 1).then(empty -> {
-                        out.collect(currentValue + 1L);
-                        asyncWordCounter.commit();
-                    });
-                } else {
-                    asyncWordCounter.update(1).then(empty -> {
-                        out.collect(1L);
-                        asyncWordCounter.commit();
-                    });
-                }
-            });
-        }
+//        @Override
+//        public void flatMap(String in, Collector<Long> out) throws IOException {
+//            asyncWordCounter.value().then(currentValue -> {
+//                if (currentValue != null) {
+//                    asyncWordCounter.update(currentValue + 1).then(empty -> {
+//                        out.collect(currentValue + 1L);
+//                        // asyncWordCounter.commit();
+//                    });
+//                } else {
+//                    asyncWordCounter.update(1).then(empty -> {
+//                        out.collect(1L);
+//                        // asyncWordCounter.commit();
+//                    });
+//                }
+//            });
+//        }
 
         @Override
         public void open(Configuration config) {
             AsyncValueStateDescriptor<Integer> descriptor =
                     new AsyncValueStateDescriptor<>(
                             "wc",
-                            TypeInformation.of(new TypeHint<Integer>(){}));
+                            TypeInformation.of(new TypeHint<Integer>() {
+                            }));
             asyncWordCounter = getRuntimeContext().getAsyncState(descriptor);
+        }
+
+        @Override
+        public void flatMap(String value, Collector<Tuple2<String, Long>> out) throws Exception {
+            asyncWordCounter.value().then(currentValue -> {
+                if (currentValue != null) {
+                    asyncWordCounter.update(currentValue + 1).then(empty -> {
+                        out.collect(Tuple2.of(value, currentValue + 1L));
+                        // asyncWordCounter.commit();
+                    });
+                } else {
+                    asyncWordCounter.update(1).then(empty -> {
+                        out.collect(Tuple2.of(value, 1L));
+                        // asyncWordCounter.commit();
+                    });
+                }
+            });
         }
     }
 }

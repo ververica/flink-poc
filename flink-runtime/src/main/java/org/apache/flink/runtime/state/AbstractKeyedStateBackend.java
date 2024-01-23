@@ -29,6 +29,7 @@ import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.async.BatchCacheStateFactory;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -250,16 +251,16 @@ public abstract class AbstractKeyedStateBackend<K>
 
     /** @see KeyedStateBackend */
     @Override
-    public void setCurrentKey(K newKey) {
-        notifyKeySelected(newKey);
+    public void setCurrentKey(ReferenceCountedKey<K> newKey) {
+        notifyKeySelected(newKey.getRawKey());
         this.keyContext.setCurrentKey(newKey);
         this.keyContext.setCurrentKeyGroupIndex(
                 KeyGroupRangeAssignment.assignToKeyGroup(newKey, numberOfKeyGroups));
     }
 
     @Override
-    public void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack) {
-        notifyKeySelected(currentKey);
+    public void setCurrentKey(@Nonnull ReferenceCountedKey<K> currentKey, boolean invokeByCallBack) {
+        notifyKeySelected(currentKey.getRawKey());
         this.keyContext.setCurrentKey(currentKey, invokeByCallBack);
         this.keyContext.setCurrentKeyGroupIndex(
                 KeyGroupRangeAssignment.assignToKeyGroup(currentKey, numberOfKeyGroups));
@@ -298,9 +299,11 @@ public abstract class AbstractKeyedStateBackend<K>
         return keySerializer;
     }
 
-    /** @see KeyedStateBackend */
+    /**
+     * @see KeyedStateBackend
+     */
     @Override
-    public K getCurrentKey() {
+    public ReferenceCountedKey<K> getCurrentKey() {
         return this.keyContext.getCurrentKey();
     }
 
@@ -352,7 +355,8 @@ public abstract class AbstractKeyedStateBackend<K>
 
             keyStream.forEach(
                     (K key) -> {
-                        setCurrentKey(key);
+                        // Todo(shuazi): how to act witch applyToAllKeys()
+                        setCurrentKey(new ReferenceCountedKey<>(0, key));
                         try {
                             function.process(key, state);
                         } catch (Throwable e) {

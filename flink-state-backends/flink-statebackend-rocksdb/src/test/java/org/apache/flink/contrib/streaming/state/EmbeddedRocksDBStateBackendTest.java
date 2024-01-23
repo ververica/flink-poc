@@ -43,6 +43,7 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateBackendTestBase;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.storage.FileSystemCheckpointStorage;
 import org.apache.flink.runtime.state.storage.JobManagerCheckpointStorage;
 import org.apache.flink.runtime.util.BlockerCheckpointStreamFactory;
@@ -306,7 +307,7 @@ public class EmbeddedRocksDBStateBackendTest
                 .createColumnFamily(any(ColumnFamilyDescriptor.class));
 
         for (int i = 0; i < 100; ++i) {
-            keyedStateBackend.setCurrentKey(i);
+            keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, i));
             testState1.update(4200 + i);
             testState2.update("S-" + (4200 + i));
         }
@@ -516,7 +517,7 @@ public class EmbeddedRocksDBStateBackendTest
                     backend.getPartitionedState(
                             VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, kvId);
 
-            backend.setCurrentKey(1);
+            backend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
             state.update("Hello");
 
             // more than just the root directory
@@ -554,7 +555,7 @@ public class EmbeddedRocksDBStateBackendTest
 
                     reset(sharedStateRegistry);
 
-                    backend.setCurrentKey(checkpointId);
+                    backend.setCurrentKey(new ReferenceCountedKey<>(0, checkpointId));
                     state.update("Hello-" + checkpointId);
 
                     RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshot =
@@ -639,7 +640,7 @@ public class EmbeddedRocksDBStateBackendTest
             if (i % 10 == 0) {
                 Thread.sleep(1);
             }
-            keyedStateBackend.setCurrentKey(i);
+            keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, i));
             testState1.update(4200 + i);
             testState2.update("S-" + (4200 + i));
         }
