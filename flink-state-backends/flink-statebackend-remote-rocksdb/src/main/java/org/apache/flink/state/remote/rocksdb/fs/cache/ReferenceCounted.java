@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state;
+package org.apache.flink.state.remote.rocksdb.fs.cache;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,12 +33,12 @@ public abstract class ReferenceCounted {
 
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceCounted.class);
 
-    private static final Unsafe unsafe;
-    private static final long referenceOffset;
+	private static final Unsafe unsafe;
+	private static final long referenceOffset;
 
-    static {
-        try {
-            unsafe = (Unsafe) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+	static {
+		try {
+			unsafe = (Unsafe) AccessController.doPrivileged(new PrivilegedAction<Object>() {
                 @Override
                 public Object run() {
                     try {
@@ -51,51 +51,49 @@ public abstract class ReferenceCounted {
                     return null;
                 }
             });
-            referenceOffset = unsafe.objectFieldOffset
-                    (ReferenceCounted.class.getDeclaredField("referenceCount"));
-        } catch (Exception ex) {
-            throw new Error(ex);
-        }
-    }
+			referenceOffset = unsafe.objectFieldOffset
+				(ReferenceCounted.class.getDeclaredField("referenceCount"));
+		} catch (Exception ex) {
+			throw new Error(ex);
+		}
+	}
 
-    private volatile int referenceCount;
+	private volatile int referenceCount;
 
-    public ReferenceCounted(int initReference) {
-        this.referenceCount = initReference;
-    }
+	public ReferenceCounted(int initReference) {
+		this.referenceCount = initReference;
+	}
 
-    public int retain() {
-        return unsafe.getAndAddInt(this, referenceOffset, 1) + 1;
-    }
+	public int retain() {
+		return unsafe.getAndAddInt(this, referenceOffset, 1) + 1;
+	}
 
-    /**
-     * Try to retain this object. Fail if reference count is already zero.
-     *
-     * @return zero if failed, otherwise current reference count.
-     */
-    public int tryRetain() {
-        int v;
-        do {
-            v = unsafe.getIntVolatile(this, referenceOffset);
-        } while (v != 0 && !unsafe.compareAndSwapInt(this, referenceOffset, v, v + 1));
-        return v == 0 ? 0 : v + 1;
-    }
+	/**
+	 * Try to retain this object. Fail if reference count is already zero.
+	 * @return zero if failed, otherwise current reference count.
+	 */
+	public int tryRetain() {
+		int v;
+		do {
+			v = unsafe.getIntVolatile(this, referenceOffset);
+		} while (v != 0 && !unsafe.compareAndSwapInt(this, referenceOffset, v, v + 1));
+		return v == 0 ? 0 : v + 1;
+	}
 
-    public int release() {
+	public int release() {
+		int r = unsafe.getAndAddInt(this, referenceOffset, -1) - 1;
+		if (r == 0) {
+			referenceCountReachedZero();
+		}
+		return r;
+	}
 
-        int r = unsafe.getAndAddInt(this, referenceOffset, -1) - 1;
-        if (r == 0) {
-            referenceCountReachedZero();
-        }
-        return r;
-    }
+	public int getReferenceCount() {
+		return referenceCount;
+	}
 
-    public int getReferenceCount() {
-        return referenceCount;
-    }
-
-    /**
-     * A method called when the reference count reaches zero.
-     */
-    protected abstract void referenceCountReachedZero();
+	/**
+	 * A method called when the reference count reaches zero.
+	 */
+	protected abstract void referenceCountReachedZero();
 }

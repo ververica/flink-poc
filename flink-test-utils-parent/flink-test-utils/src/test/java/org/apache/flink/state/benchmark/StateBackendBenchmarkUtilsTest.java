@@ -25,7 +25,6 @@ import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.contrib.streaming.state.RocksDBKeyedStateBackend;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Rule;
@@ -102,18 +101,18 @@ public class StateBackendBenchmarkUtilsTest {
         KeyedStateBackend<Long> backend = createKeyedStateBackend(backendType);
         ListState<Long> listState = getListState(backend, listStateDescriptor);
         for (long i = 0; i < 10; i++) {
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, i));
+            backend.setCurrentKey(i);
             listState.add(i);
         }
         applyToAllKeys(
                 backend,
                 listStateDescriptor,
                 (k, state) -> {
-                    backend.setCurrentKey(new ReferenceCountedKey<>(0, k));
+                    backend.setCurrentKey(k);
                     state.clear();
                 });
         for (long i = 0; i < 10; i++) {
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, i));
+            backend.setCurrentKey(i);
             Assert.assertNull(listState.get());
         }
         cleanUp(backend);
@@ -124,7 +123,7 @@ public class StateBackendBenchmarkUtilsTest {
         KeyedStateBackend<Long> backend = createKeyedStateBackend(backendType);
         ListState<Long> listState = getListState(backend, listStateDescriptor);
         for (long i = 0; i < 10; i++) {
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, i));
+            backend.setCurrentKey(i);
             listState.add(i);
         }
         if (backend instanceof RocksDBKeyedStateBackend) {

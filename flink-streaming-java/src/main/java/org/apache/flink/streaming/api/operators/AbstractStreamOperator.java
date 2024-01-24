@@ -46,7 +46,6 @@ import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.StreamOperatorStateHandler.CheckpointedStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -65,7 +64,6 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 import static org.apache.flink.util.Preconditions.checkState;
 
@@ -150,8 +148,6 @@ public abstract class AbstractStreamOperator<OUT>
     // ---------------- time handler ------------------
 
     protected transient ProcessingTimeService processingTimeService;
-
-    // ---------------- batching key
 
     // ------------------------------------------------------------------------
     //  Life Cycle
@@ -511,7 +507,7 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     public void setCurrentKey(Object key) {
-        stateHandler.setCurrentKey(new ReferenceCountedKey<>(0, key));
+        stateHandler.setCurrentKey(key);
     }
 
     public Object getCurrentKey() {
@@ -530,14 +526,6 @@ public abstract class AbstractStreamOperator<OUT>
 
     public void clearCurrentKeysCache() {
         stateHandler.clearCurrentKeysCache();;
-    }
-
-    public void preProcessElement() {
-        ((ReferenceCountedKey<Object>)getCurrentKey()).retain();
-    }
-
-    public void postProcessElement() {
-        ((ReferenceCountedKey<Object>)getCurrentKey()).release();
     }
 
     public KeyedStateStore getKeyedStateStore() {

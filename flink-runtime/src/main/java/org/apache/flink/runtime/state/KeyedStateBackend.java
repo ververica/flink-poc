@@ -27,7 +27,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.async.AsyncKeyedStateFactory;
 import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.util.Disposable;
 import org.apache.flink.util.function.RunnableWithException;
 
@@ -48,12 +47,10 @@ public interface KeyedStateBackend<K>
      *
      * @param newKey The new current key.
      */
-    void setCurrentKey(ReferenceCountedKey<K> newKey);
+    void setCurrentKey(K newKey);
 
-    /**
-     * @return Current key.
-     */
-    ReferenceCountedKey<K> getCurrentKey();
+    /** @return Current key. */
+    K getCurrentKey();
 
     default boolean isSupportAsync() {
         return false;

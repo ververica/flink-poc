@@ -20,7 +20,6 @@ package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.state.KeyGroupRange;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 
 import javax.annotation.Nonnull;
 
@@ -38,7 +37,7 @@ import java.util.Collection;
 public interface InternalKeyContext<K> {
 
     /** Used by states to access the current key. */
-    ReferenceCountedKey<K> getCurrentKey();
+    K getCurrentKey();
 
     /** Returns the key-group to which the current key belongs. */
     int getCurrentKeyGroupIndex();
@@ -54,9 +53,9 @@ public interface InternalKeyContext<K> {
      *
      * @param currentKey the current key to set to.
      */
-    void setCurrentKey(@Nonnull ReferenceCountedKey<K> currentKey);
+    void setCurrentKey(@Nonnull K currentKey);
 
-    void setCurrentKey(@Nonnull ReferenceCountedKey<K> currentKey, boolean invokeByCallBack);
+    void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack);
 
     boolean isInCallBackProcess();
 

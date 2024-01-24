@@ -28,7 +28,6 @@ import org.apache.flink.runtime.io.network.NettyShuffleEnvironmentBuilder;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -333,7 +332,7 @@ public class StreamTaskCancellationTest extends TestLogger {
             final KeyedStateBackend<String> keyedStateBackend = getKeyedStateBackend();
             for (int keyIdx = 0; keyIdx < numTimersToRegister; keyIdx++) {
                 final String key = "key-" + keyIdx;
-                keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, key));
+                keyedStateBackend.setCurrentKey(key);
                 if (processingTime) {
                     timerService.registerProcessingTimeTimer(VoidNamespace.INSTANCE, 0);
                 } else {

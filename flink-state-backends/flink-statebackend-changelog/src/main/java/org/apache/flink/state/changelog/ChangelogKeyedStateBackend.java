@@ -51,7 +51,6 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TestableKeyedStateBackend;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.changelog.ChangelogStateBackendHandle;
 import org.apache.flink.runtime.state.changelog.ChangelogStateBackendHandle.ChangelogStateBackendHandleImpl;
 import org.apache.flink.runtime.state.changelog.ChangelogStateBackendLocalHandle;
@@ -278,12 +277,12 @@ public class ChangelogKeyedStateBackend<K>
     }
 
     @Override
-    public void setCurrentKey(ReferenceCountedKey<K> newKey) {
+    public void setCurrentKey(K newKey) {
         keyedStateBackend.setCurrentKey(newKey);
     }
 
     @Override
-    public ReferenceCountedKey<K> getCurrentKey() {
+    public K getCurrentKey() {
         return keyedStateBackend.getCurrentKey();
     }
 

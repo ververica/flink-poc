@@ -27,7 +27,6 @@ import org.apache.flink.core.fs.Path;
 
 import org.apache.flink.metrics.MetricGroup;
 
-import org.apache.flink.runtime.state.ReferenceCounted;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +37,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class FileBasedCache implements Closeable {

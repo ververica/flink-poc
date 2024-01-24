@@ -25,7 +25,6 @@ import org.apache.flink.api.common.typeutils.SingleThreadAccessCheckingTypeSeria
 import org.apache.flink.api.common.typeutils.base.StringSerializer;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.state.StateSnapshotTransformer.StateSnapshotTransformFactory;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.internal.InternalListState;
 import org.apache.flink.runtime.state.internal.InternalMapState;
 import org.apache.flink.runtime.state.internal.InternalValueState;
@@ -62,7 +61,7 @@ class StateSnapshotTransformerTest {
 
         for (TestState state : testStates) {
             for (int i = 0; i < 100; i++) {
-                backend.setCurrentKey(new ReferenceCountedKey<>(0, i));
+                backend.setCurrentKey(i);
                 state.setToRandomValue();
             }
 

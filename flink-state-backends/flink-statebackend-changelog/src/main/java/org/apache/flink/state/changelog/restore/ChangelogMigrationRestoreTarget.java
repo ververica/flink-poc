@@ -34,7 +34,6 @@ import org.apache.flink.runtime.state.PriorityComparable;
 import org.apache.flink.runtime.state.SavepointResources;
 import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
@@ -198,7 +197,7 @@ public class ChangelogMigrationRestoreTarget<K> implements ChangelogRestoreTarge
         return new AbstractKeyedStateBackend<K>(keyedStateBackend) {
 
             @Override
-            public void setCurrentKey(ReferenceCountedKey<K> newKey) {
+            public void setCurrentKey(K newKey) {
                 keyedStateBackend.setCurrentKey(newKey);
             }
 

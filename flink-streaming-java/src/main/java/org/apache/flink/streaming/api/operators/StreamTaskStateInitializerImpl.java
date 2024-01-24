@@ -722,9 +722,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
     Consumer<RunnableWithException> deferStateCallbackToMailbox(
             MailboxExecutor mailboxExecutor) {
         return stateCallback -> {
-
             mailboxExecutor.execute(() -> stateCallback.run(), "State call back");
-            //
         };
     }
 }

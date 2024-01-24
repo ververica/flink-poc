@@ -1,6 +1,5 @@
 package org.apache.flink.runtime.state.async;
 
-import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.state.async.StateFuture;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
@@ -16,12 +15,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
@@ -35,16 +31,15 @@ public class BatchKeyProcessor<K, N, V> {
     private static final Logger LOG = LoggerFactory.getLogger(BatchKeyProcessor.class);
 
     private final Set<K> batchingKeys = Sets.newConcurrentHashSet();
-
-    private final RecordBatchingContainer<ReferenceCountedKey<K>> batchingOperations = new RecordBatchingContainer<>();
-    private final RecordBatchingContainer<ReferenceCountedKey<K>> pendingOperations = new RecordBatchingContainer<>();
+    private final RecordBatchingContainer<K> batchingOperations = new RecordBatchingContainer<>();
+    private final RecordBatchingContainer<K> pendingOperations = new RecordBatchingContainer<>();
 
     private final InternalBatchValueState<K, N, V> batchValueState;
 
-    private final int BATCH_MAX_SIZE;
+    private static final int BATCH_MAX_SIZE = 1000;
     private final AtomicLong onFlyingIORequestNum = new AtomicLong(0);
 
-    private final long MAX_ON_FLYING_RECORDING_NUM;
+    private static final long MAX_ON_FLYING_RECORDING_NUM = 10000;
 
     protected final ExecutorService asyncExecutors;
 
@@ -59,58 +54,41 @@ public class BatchKeyProcessor<K, N, V> {
             InternalKeyContext<K> keyContext,
             Consumer<RunnableWithException> registerCallBackFunc,
             Consumer<Integer> updateOngoingStateReq) {
-        this(batchValueState, keyContext, registerCallBackFunc, updateOngoingStateReq, 2, 3);
-    }
-
-    @VisibleForTesting
-    BatchKeyProcessor(
-            InternalBatchValueState<K, N, V> batchValueState,
-            InternalKeyContext<K> keyContext,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq,
-            int batchSize,
-            long maxNumOfFlyingRecords) {
         this.asyncExecutors = Executors.newFixedThreadPool(2);
         this.batchValueState = batchValueState;
         this.keyContext = keyContext;
         this.registerCallBackFunc = registerCallBackFunc;
         this.updateOngoingStateReq = updateOngoingStateReq;
-        this.BATCH_MAX_SIZE = batchSize;
-        this.MAX_ON_FLYING_RECORDING_NUM = maxNumOfFlyingRecords;
     }
 
     public StateFuture<V> get(K key) throws IOException {
         LOG.trace("Async get {} from BatchKeyProcessor", key);
-        keyContext.getCurrentKey().setReleaseKeyFunc(k -> this.endKeyProcess(k));
-        StateFutureImpl<K, V> stateFuture = new StateFutureImpl<>(keyContext.getCurrentKey(), keyContext, registerCallBackFunc,
-                updateOngoingStateReq);
+        StateFutureImpl<K, V> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc, updateOngoingStateReq);
         Operation<K, V, V> getOperation = Operation.ofGet(stateFuture);
-        handleOneStateOperation(keyContext.getCurrentKey(), getOperation);
+        handleOneStateOperation(key, getOperation);
         return stateFuture;
     }
 
     public StateFuture<Void> put(K key, V value) throws IOException {
         LOG.trace("Async put {} to BatchKeyProcessor", key);
-        keyContext.getCurrentKey().setReleaseKeyFunc(k -> this.endKeyProcess(k));
-        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(keyContext.getCurrentKey(), keyContext, registerCallBackFunc,
-                updateOngoingStateReq);
+        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(key, keyContext, registerCallBackFunc, updateOngoingStateReq);
         Operation<K, V, Void> putOperation = Operation.ofPut(value, stateFuture);
-        handleOneStateOperation(keyContext.getCurrentKey(), putOperation);
+        handleOneStateOperation(key, putOperation);
         return stateFuture;
     }
 
-    private void handleOneStateOperation(ReferenceCountedKey<K> key, Operation<K, V, ?> stateOperation) throws IOException {
-        boolean keyConflict = keyConflict(key.getRawKey());
+    private void handleOneStateOperation(K key, Operation<K, V, ?> stateOperation) throws IOException {
+        boolean keyConflict = keyConflict(key);
         if (keyConflict) {
-            pendingOperations.add(Tuple2.of(key, (Operation<ReferenceCountedKey<K>, ?, ?>) stateOperation));
+            pendingOperations.add(Tuple2.of(key, stateOperation));
             if (pendingOperations.size() > BATCH_MAX_SIZE) {
                 backPressureBecauseTooManyPendingOperations();
             }
             return;
         }
 
-        batchingOperations.offer(Tuple2.of(key, (Operation<ReferenceCountedKey<K>, ?, ?>) stateOperation));
-        batchingKeys.add(key.getRawKey());
+        batchingOperations.offer(Tuple2.of(key, stateOperation));
+        batchingKeys.add(key);
 
         if (batchingOperations.size() + pendingOperations.size() > BATCH_MAX_SIZE) {
             LOG.trace("handle one batch: keyConflict {}, pendingOperations size {}", keyConflict, batchingOperations.size());
@@ -120,7 +98,7 @@ public class BatchKeyProcessor<K, N, V> {
     }
 
     public void endKeyProcess(K key) {
-        boolean result = batchingKeys.remove(key);
+        boolean result =  batchingKeys.remove(key);
         LOG.trace("remove key {}", key);
         assert result;
     }
@@ -138,14 +116,14 @@ public class BatchKeyProcessor<K, N, V> {
             resetBatchingOperationQueue();
             return;
         }
-
+        
         Map<K, Operation<K, V, V>> getOperations = new HashMap<>();
         Map<K, Operation<K, V, Void>> putOperations = new HashMap<>();
-        for (Tuple2<ReferenceCountedKey<K>, Operation<ReferenceCountedKey<K>, ?, ?>> entry : batchingOperations) {
+        for (Tuple2<K, Operation<K, ?, ?>> entry : batchingOperations) {
             if (entry.f1.type == OperationType.PUT) {
-                putOperations.put(entry.f0.getRawKey(), (Operation<K, V, Void>) entry.f1);
+                putOperations.put(entry.f0, (Operation<K, V, Void>) entry.f1);
             } else {
-                getOperations.put(entry.f0.getRawKey(), (Operation<K, V, V>) entry.f1);
+                getOperations.put(entry.f0, (Operation<K, V, V>) entry.f1);
             }
             onFlyingIORequestNum.incrementAndGet();
         }
@@ -176,15 +154,14 @@ public class BatchKeyProcessor<K, N, V> {
         resetBatchingOperationQueue();
     }
 
-    @VisibleForTesting
-    void resetBatchingOperationQueue() {
+    private void resetBatchingOperationQueue() {
         batchingOperations.clear();
-        Iterator<Tuple2<ReferenceCountedKey<K>, Operation<ReferenceCountedKey<K>, ?, ?>>> pendingIter = pendingOperations.iterator();
-        while (pendingIter.hasNext()) {
-            Tuple2<ReferenceCountedKey<K>, Operation<ReferenceCountedKey<K>, ?, ?>> keyAndOperation = pendingIter.next();
-            if (!batchingKeys.contains(keyAndOperation.f0.getRawKey())) {
+        Iterator<Tuple2<K, Operation<K, ?, ?>>> pendingIter = pendingOperations.iterator();
+        while(pendingIter.hasNext()) {
+            Tuple2<K, Operation<K, ?, ?>> keyAndOperation = pendingIter.next();
+            if (!batchingKeys.contains(keyAndOperation.f0)) {
                 batchingOperations.offer(keyAndOperation);
-                batchingKeys.add(keyAndOperation.f0.getRawKey());
+                batchingKeys.add(keyAndOperation.f0);
                 pendingIter.remove();
             }
         }
@@ -217,12 +194,11 @@ public class BatchKeyProcessor<K, N, V> {
     static class Operation<K, V, F> {
         OperationType type;
 
-        @Nullable
-        V value;
+        @Nullable V value;
 
         StateFutureImpl<K, F> stateFuture;
 
-        public Operation(OperationType type, @Nullable V value, StateFutureImpl<K, F> stateFuture) {
+        public Operation(OperationType type,  @Nullable V value,  StateFutureImpl<K, F> stateFuture) {
             this.type = type;
             this.value = value;
             this.stateFuture = stateFuture;
@@ -242,7 +218,7 @@ public class BatchKeyProcessor<K, N, V> {
     }
 
     static class RecordBatchingContainer<K> implements Iterable<Tuple2<K, Operation<K, ?, ?>>> {
-        private ConcurrentLinkedQueue<Tuple2<K, Operation<K, ?, ?>>> batchingOperations;
+        private  ConcurrentLinkedQueue<Tuple2<K, Operation<K, ?, ?>>> batchingOperations;
 
         private int size = 0;
 

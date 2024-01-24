@@ -140,7 +140,7 @@ public abstract class StateTable<K, N, S>
      *     null} if no mapping for the specified key is found.
      */
     public S get(N namespace) {
-        return get(keyContext.getCurrentKey().getRawKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
+        return get(keyContext.getCurrentKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
     }
 
     /**
@@ -153,7 +153,7 @@ public abstract class StateTable<K, N, S>
      */
     public boolean containsKey(N namespace) {
         return containsKey(
-                keyContext.getCurrentKey().getRawKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
+                keyContext.getCurrentKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
     }
 
     /**
@@ -163,7 +163,7 @@ public abstract class StateTable<K, N, S>
      * @param state the state. Can be null.
      */
     public void put(N namespace, S state) {
-        put(keyContext.getCurrentKey().getRawKey(), keyContext.getCurrentKeyGroupIndex(), namespace, state);
+        put(keyContext.getCurrentKey(), keyContext.getCurrentKeyGroupIndex(), namespace, state);
     }
 
     /**
@@ -174,7 +174,7 @@ public abstract class StateTable<K, N, S>
      * @param namespace the namespace of the mapping to remove. Not null.
      */
     public void remove(N namespace) {
-        remove(keyContext.getCurrentKey().getRawKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
+        remove(keyContext.getCurrentKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
     }
 
     /**
@@ -187,7 +187,7 @@ public abstract class StateTable<K, N, S>
      */
     public S removeAndGetOld(N namespace) {
         return removeAndGetOld(
-                keyContext.getCurrentKey().getRawKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
+                keyContext.getCurrentKey(), keyContext.getCurrentKeyGroupIndex(), namespace);
     }
 
     /**
@@ -204,7 +204,7 @@ public abstract class StateTable<K, N, S>
     public <T> void transform(
             N namespace, T value, StateTransformationFunction<S, T> transformation)
             throws Exception {
-        K key = keyContext.getCurrentKey().getRawKey();
+        K key = keyContext.getCurrentKey();
         checkKeyNamespacePreconditions(key, namespace);
 
         int keyGroup = keyContext.getCurrentKeyGroupIndex();
