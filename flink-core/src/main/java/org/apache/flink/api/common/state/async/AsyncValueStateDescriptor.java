@@ -26,7 +26,7 @@ import org.apache.flink.api.common.typeinfo.TypeInformation;
  * StateDescriptor for {@link AsyncValueState}.
  */
 @PublicEvolving
-public class AsyncValueStateDescriptor<T>  extends StateDescriptor<AsyncValueState<T>, T> {
+public class AsyncValueStateDescriptor<T> extends AsyncStateDescriptor<AsyncValueState<T>, T> {
 
     public AsyncValueStateDescriptor(String name, TypeInformation<T> typeInfo) {
         super(name, typeInfo, null);

@@ -18,20 +18,10 @@
 
 package org.apache.flink.api.common.state.async;
 
-import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.api.common.state.State;
-
-import java.io.IOException;
-
 /**
- * Async version corresponding to {@link org.apache.flink.api.common.state.ValueState}.
+ * Async version of {@link org.apache.flink.api.common.state.State}.
  */
-@PublicEvolving
-public interface AsyncValueState<T> extends AsyncState {
+public interface AsyncState {
 
-    StateFuture<T> value();
-
-    StateFuture<Void> update(T value);
-
-    void commit();
+    StateFuture<Void> clear();
 }

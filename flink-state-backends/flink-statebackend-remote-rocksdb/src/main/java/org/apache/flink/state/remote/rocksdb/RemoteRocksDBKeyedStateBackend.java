@@ -20,6 +20,10 @@ package org.apache.flink.state.remote.rocksdb;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.contrib.streaming.state.RocksDBKeyedStateBackend;
@@ -42,9 +46,7 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
-import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.ResourceGuard;
-
 import org.apache.flink.util.function.RunnableWithException;
 
 import org.rocksdb.ColumnFamilyHandle;
@@ -63,8 +65,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<K> {
 
@@ -160,7 +160,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
     }
 
     @Override
-    public boolean isSupportBatchInterfaces() {
+    public boolean isSupportAsync() {
         return true;
     }
 
@@ -179,57 +179,26 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         return batchCacheStateConfig;
     }
 
-    private static final Map<StateDescriptor.Type, StateCreateFactory> STATE_CREATE_FACTORIES =
-            Stream.of(
-                            Tuple2.of(
-                                    StateDescriptor.Type.VALUE,
-                                    (StateCreateFactory) BatchRocksdbValueState::create))
-                    .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
-
-    @Nonnull
     @Override
-    public <N, SV, SEV, S extends State, IS extends S> IS createOrUpdateInternalState(
+    public <N, SV, SEV, S extends AsyncState, IS extends S> IS createOrUpdateInternalState(
             @Nonnull TypeSerializer<N> namespaceSerializer,
-            @Nonnull StateDescriptor<S, SV> stateDesc,
+            @Nonnull AsyncStateDescriptor<S, SV> stateDesc,
             @Nonnull StateSnapshotTransformer.StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
             boolean allowFutureMetadataUpdates)
             throws Exception {
-        Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>> registerResult =
-                tryRegisterKvStateInformation(
-                        stateDesc,
-                        namespaceSerializer,
-                        snapshotTransformFactory,
-                        allowFutureMetadataUpdates);
-        if (!allowFutureMetadataUpdates) {
-            // Config compact filter only when no future metadata updates
-            ttlCompactFiltersManager.configCompactFilter(
-                    stateDesc, registerResult.f1.getStateSerializer());
-        }
 
-        return createState(stateDesc, registerResult);
+        State state = createOrUpdateInternalState(namespaceSerializer, convertStateDescriptor(stateDesc), snapshotTransformFactory, allowFutureMetadataUpdates);
+        // TODO: Implement
+        // AsyncValueState v = Factory.wrap(ValueState)
+        // AsyncValueState v1 = Batching.wrap(v)
+        return null;
     }
 
-    private <N, SV, S extends State, IS extends S> IS createState(
-            StateDescriptor<S, SV> stateDesc,
-            Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
-                    registerResult)
-            throws Exception {
-        @SuppressWarnings("unchecked")
-        IS createdState = (IS) createdKVStates.get(stateDesc.getName());
-        if (createdState == null) {
-            StateCreateFactory stateCreateFactory = STATE_CREATE_FACTORIES.get(stateDesc.getType());
-            if (stateCreateFactory == null) {
-                throw new FlinkRuntimeException(stateNotSupportedMessage(stateDesc));
-            }
-            createdState =
-                    stateCreateFactory.createState(
-                            stateDesc, keySerializer, registerResult, RemoteRocksDBKeyedStateBackend.this);
-        } else {
-            throw new UnsupportedOperationException("Don't support updating yet");
+    private <S extends State, AS extends AsyncState, SV> StateDescriptor<S, SV> convertStateDescriptor(@Nonnull AsyncStateDescriptor<AS, SV> stateDesc) {
+        if (stateDesc instanceof AsyncValueStateDescriptor) {
+            return (StateDescriptor<S, SV>) new ValueStateDescriptor<>(stateDesc.getName(), stateDesc.getSerializer());
         }
-
-        createdKVStates.put(stateDesc.getName(), createdState);
-        return createdState;
+        return null;
     }
 
     @Override
@@ -238,16 +207,6 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             super.cleanInstanceBasePath();
         }
         //TODO
-    }
-
-    protected interface StateCreateFactory {
-        <K, N, SV, S extends State, IS extends S> IS createState(
-                StateDescriptor<S, SV> stateDesc,
-                TypeSerializer<K> keySerializer,
-                Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
-                        registerResult,
-                RemoteRocksDBKeyedStateBackend<K> backend)
-                throws Exception;
     }
 
     public BatchParallelIOExecutor<K> getBatchParallelIOExecutor() {

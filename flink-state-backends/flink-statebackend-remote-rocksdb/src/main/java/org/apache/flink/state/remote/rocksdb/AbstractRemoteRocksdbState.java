@@ -19,6 +19,8 @@
 package org.apache.flink.state.remote.rocksdb;
 
 import org.apache.flink.api.common.state.State;
+import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.StateFuture;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
@@ -27,6 +29,7 @@ import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.internal.InternalAsyncState;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 
 import org.apache.flink.util.Preconditions;
@@ -40,7 +43,7 @@ import java.io.IOException;
 /**
  * The abstract class for rocksdb batch State.
  */
-public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalKvState<K, N, V>, State {
+public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsyncState<K, N, V>, AsyncState {
 
     protected TypeSerializer<K> keySerializer;
 
@@ -126,7 +129,7 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalKvS
     }
 
     @Override
-    public void clear() {
+    public StateFuture<Void> clear() {
         throw new UnsupportedOperationException();
     }
 
@@ -159,11 +162,6 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalKvS
             TypeSerializer<K> safeKeySerializer,
             TypeSerializer<N> safeNamespaceSerializer,
             TypeSerializer<V> safeValueSerializer) throws Exception {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public StateIncrementalVisitor<K, N, V> getStateIncrementalVisitor(int recommendedMaxNumberOfReturnedRecords) {
         throw new UnsupportedOperationException();
     }
 }
