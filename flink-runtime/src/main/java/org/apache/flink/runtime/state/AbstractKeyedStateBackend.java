@@ -23,6 +23,8 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.InternalCheckpointListener;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
@@ -30,6 +32,7 @@ import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
 import org.apache.flink.runtime.state.async.BatchCacheStateFactory;
 import org.apache.flink.runtime.state.async.ReferenceCountedKey;
+import org.apache.flink.runtime.state.async.internal.InternalAsyncState;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -71,6 +74,9 @@ public abstract class AbstractKeyedStateBackend<K>
 
     /** So that we can give out state when the user uses the same key. */
     private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName;
+
+    /** So that we can give out state when the user uses the same key. */
+    private final HashMap<String, InternalAsyncState<K, ?, ?>> asyncStatesByName;
 
     /** For caching the last accessed partitioned state. */
     private String lastName;
@@ -151,6 +157,7 @@ public abstract class AbstractKeyedStateBackend<K>
                 keyContext.getNumberOfKeyGroups(),
                 keyContext.getKeyGroupRange(),
                 new HashMap<>(),
+                new HashMap<>(),
                 new ArrayList<>(1),
                 null,
                 null);
@@ -171,6 +178,7 @@ public abstract class AbstractKeyedStateBackend<K>
                 abstractKeyedStateBackend.numberOfKeyGroups,
                 abstractKeyedStateBackend.keyGroupRange,
                 abstractKeyedStateBackend.keyValueStatesByName,
+                abstractKeyedStateBackend.asyncStatesByName,
                 abstractKeyedStateBackend.keySelectionListeners,
                 abstractKeyedStateBackend.lastState,
                 abstractKeyedStateBackend.lastName);
@@ -190,6 +198,7 @@ public abstract class AbstractKeyedStateBackend<K>
             int numberOfKeyGroups,
             KeyGroupRange keyGroupRange,
             HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName,
+            HashMap<String, InternalAsyncState<K, ?, ?>> asyncStatesByName,
             ArrayList<KeySelectionListener<K>> keySelectionListeners,
             InternalKvState lastState,
             String lastName) {
@@ -210,6 +219,7 @@ public abstract class AbstractKeyedStateBackend<K>
         this.userCodeClassLoader = Preconditions.checkNotNull(userCodeClassLoader);
         this.cancelStreamRegistry = cancelStreamRegistry;
         this.keyValueStatesByName = keyValueStatesByName;
+        this.asyncStatesByName = asyncStatesByName;
         this.executionConfig = executionConfig;
         this.keyGroupCompressionDecorator = keyGroupCompressionDecorator;
         this.ttlTimeProvider = Preconditions.checkNotNull(ttlTimeProvider);
@@ -403,6 +413,28 @@ public abstract class AbstractKeyedStateBackend<K>
             }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
+        }
+        return (S) kvState;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <N, S extends AsyncState, V> S getOrCreateKeyedState(
+            final TypeSerializer<N> namespaceSerializer, AsyncStateDescriptor<S, V> stateDescriptor)
+            throws Exception {
+        checkNotNull(namespaceSerializer, "Namespace serializer");
+        checkNotNull(
+                keySerializer,
+                "State key serializer has not been configured in the config. "
+                        + "This operation cannot use partitioned state.");
+
+        InternalAsyncState<K, ?, ?> kvState = asyncStatesByName.get(stateDescriptor.getName());
+        if (kvState == null) {
+            if (!stateDescriptor.isSerializerInitialized()) {
+                stateDescriptor.initializeSerializerUnlessSet(executionConfig);
+            }
+            kvState = createOrUpdateInternalState(namespaceSerializer, stateDescriptor, StateSnapshotTransformer.StateSnapshotTransformFactory.noTransform(), false);
+            asyncStatesByName.put(stateDescriptor.getName(), kvState);
         }
         return (S) kvState;
     }

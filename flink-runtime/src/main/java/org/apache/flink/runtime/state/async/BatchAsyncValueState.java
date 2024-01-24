@@ -30,7 +30,7 @@ public class BatchAsyncValueState<K, N, T>
     }
 
     @Override
-    public StateFuture<T> value() throws StateUncheckedIOException {
+    public StateFuture<T> value() {
         try {
             updateOngoingStateReq.accept(1);
             return batchKeyProcessor.get(keyContext.getCurrentKey().getRawKey());
@@ -40,7 +40,7 @@ public class BatchAsyncValueState<K, N, T>
     }
 
     @Override
-    public StateFuture<Void> update(T value) throws StateUncheckedIOException {
+    public StateFuture<Void> update(T value) {
         try {
             updateOngoingStateReq.accept(1);
             return batchKeyProcessor.put(keyContext.getCurrentKey().getRawKey(), value);
