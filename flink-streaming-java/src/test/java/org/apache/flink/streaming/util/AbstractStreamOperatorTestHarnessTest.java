@@ -31,7 +31,6 @@ import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
 import org.apache.flink.streaming.api.operators.ProcessOperator;
@@ -95,7 +94,7 @@ public class AbstractStreamOperatorTestHarnessTest extends TestLogger {
                             stateDescriptor);
 
             int expectedValue = 42;
-            keyedStateBackend.setCurrentKey(new ReferenceCountedKey<>(0, 1));
+            keyedStateBackend.setCurrentKey(1);
             result.setStateTtlProcessingTime(0L);
             state.update(expectedValue);
             Assert.assertEquals(expectedValue, (int) state.value());

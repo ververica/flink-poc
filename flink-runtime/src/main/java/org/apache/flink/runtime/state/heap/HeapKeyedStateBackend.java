@@ -49,7 +49,6 @@ import org.apache.flink.runtime.state.StateSnapshotRestore;
 import org.apache.flink.runtime.state.StateSnapshotTransformer.StateSnapshotTransformFactory;
 import org.apache.flink.runtime.state.StateSnapshotTransformers;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.FlinkRuntimeException;
@@ -438,8 +437,7 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
                     partitionStateFactory.get(namespace, namespaceSerializer, stateDescriptor);
 
             for (K key : keys) {
-                // todo(shuazi)
-                setCurrentKey(new ReferenceCountedKey<>(0, key));
+                setCurrentKey(key);
                 function.process(key, state);
             }
         }

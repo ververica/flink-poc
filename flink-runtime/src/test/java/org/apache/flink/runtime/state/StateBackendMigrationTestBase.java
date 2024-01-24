@@ -40,7 +40,6 @@ import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.operators.testutils.MockEnvironment;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.testutils.statemigration.TestType;
 import org.apache.flink.util.IOUtils;
@@ -179,11 +178,11 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             CustomVoidNamespaceSerializer.INSTANCE,
                             initialAccessDescriptor);
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             valueState.update(new TestType("foo", 1456));
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             valueState.update(new TestType("bar", 478));
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             valueState.update(new TestType("hello", 189));
 
             KeyedStateHandle snapshot =
@@ -205,15 +204,15 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             newAccessDescriptorAfterRestore);
 
             // make sure that reading and writing each key state works with the new serializer
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             assertThat(valueState.value()).isEqualTo(new TestType("foo", 1456));
             valueState.update(new TestType("newValue1", 751));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             assertThat(valueState.value()).isEqualTo(new TestType("bar", 478));
             valueState.update(new TestType("newValue2", 167));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             assertThat(valueState.value()).isEqualTo(new TestType("hello", 189));
             valueState.update(new TestType("newValue3", 444));
 
@@ -296,15 +295,15 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             CustomVoidNamespaceSerializer.INSTANCE,
                             initialAccessDescriptor);
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             listState.add(new TestType("key-1", 1));
             listState.add(new TestType("key-1", 2));
             listState.add(new TestType("key-1", 3));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             listState.add(new TestType("key-2", 1));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             listState.add(new TestType("key-3", 1));
             listState.add(new TestType("key-3", 2));
 
@@ -327,7 +326,7 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             newAccessDescriptorAfterRestore);
 
             // make sure that reading and writing each key state works with the new serializer
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             Iterator<TestType> iterable1 = listState.get().iterator();
             assertThat(iterable1.next()).isEqualTo(new TestType("key-1", 1));
             assertThat(iterable1.next()).isEqualTo(new TestType("key-1", 2));
@@ -335,13 +334,13 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
             assertThat(iterable1).isExhausted();
             listState.add(new TestType("new-key-1", 123));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             Iterator<TestType> iterable2 = listState.get().iterator();
             assertThat(iterable2.next()).isEqualTo(new TestType("key-2", 1));
             assertThat(iterable2).isExhausted();
             listState.add(new TestType("new-key-2", 456));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             Iterator<TestType> iterable3 = listState.get().iterator();
             assertThat(iterable3.next()).isEqualTo(new TestType("key-3", 1));
             assertThat(iterable3.next()).isEqualTo(new TestType("key-3", 2));
@@ -455,15 +454,15 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             CustomVoidNamespaceSerializer.INSTANCE,
                             initialAccessDescriptor);
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             mapState.put(1, new TestType("key-1", 1));
             mapState.put(2, new TestType("key-1", 2));
             mapState.put(3, new TestType("key-1", 3));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             mapState.put(1, new TestType("key-2", 1));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             mapState.put(1, new TestType("key-3", 1));
             mapState.put(2, new TestType("key-3", 2));
 
@@ -486,7 +485,7 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             newAccessDescriptorAfterRestore);
 
             // make sure that reading and writing each key state works with the new serializer
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             // sort iterator because the order of elements is otherwise not deterministic
             Iterator<Map.Entry<Integer, TestType>> iterable1 = sortedIterator(mapState.iterator());
 
@@ -506,7 +505,7 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
 
             mapState.put(123, new TestType("new-key-1", 123));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,2));
+            backend.setCurrentKey(2);
             Iterator<Map.Entry<Integer, TestType>> iterable2 = mapState.iterator();
 
             actual = iterable2.next();
@@ -516,7 +515,7 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
 
             mapState.put(456, new TestType("new-key-2", 456));
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 3));
+            backend.setCurrentKey(3);
             // sort iterator because the order of elements is otherwise not deterministic
             Iterator<Map.Entry<Integer, TestType>> iterable3 = sortedIterator(mapState.iterator());
 
@@ -647,9 +646,9 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                     backend.getPartitionedState(
                             VoidNamespace.INSTANCE, CustomVoidNamespaceSerializer.INSTANCE, kvId);
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, new TestType("foo", 123)));
+            backend.setCurrentKey(new TestType("foo", 123));
             valueState.update(1);
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, new TestType("bar", 456)));
+            backend.setCurrentKey(new TestType("bar", 456));
             valueState.update(5);
 
             KeyedStateHandle snapshot =
@@ -669,9 +668,9 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             VoidNamespace.INSTANCE, CustomVoidNamespaceSerializer.INSTANCE, kvId);
 
             // access and check previous state
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, new TestType("foo", 123)));
+            backend.setCurrentKey(new TestType("foo", 123));
             assertThat(valueState.value().intValue()).isOne();
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, new TestType("bar", 456)));
+            backend.setCurrentKey(new TestType("bar", 456));
             assertThat(valueState.value().intValue()).isEqualTo(5);
 
             // do another snapshot to verify the snapshot logic after migration
@@ -745,9 +744,9 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                     backend.getPartitionedState(
                             new TestType("namespace", 123), initialNamespaceSerializer, kvId);
 
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             valueState.update(10);
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
+            backend.setCurrentKey(5);
             valueState.update(50);
 
             KeyedStateHandle snapshot =
@@ -770,10 +769,10 @@ public abstract class StateBackendMigrationTestBase<B extends StateBackend> {
                             kvId);
 
             // access and check previous state
-            backend.setCurrentKey(new ReferenceCountedKey<>(0,1));
+            backend.setCurrentKey(1);
             assertThat(valueState.value().intValue()).isEqualTo(10);
             valueState.update(10);
-            backend.setCurrentKey(new ReferenceCountedKey<>(0, 5));
+            backend.setCurrentKey(5);
             assertThat(valueState.value().intValue()).isEqualTo(50);
 
             // do another snapshot to verify the snapshot logic after migration

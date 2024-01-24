@@ -20,7 +20,6 @@ package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -39,7 +38,7 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     private final int numberOfKeyGroups;
 
     /** The currently active key. */
-    private ReferenceCountedKey<K> currentKey;
+    private K currentKey;
     /** The key group of the currently active key. */
     private int currentKeyGroupIndex;
 
@@ -54,7 +53,7 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     }
 
     @Override
-    public ReferenceCountedKey<K> getCurrentKey() {
+    public K getCurrentKey() {
         return currentKey;
     }
 
@@ -74,13 +73,13 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     }
 
     @Override
-    public void setCurrentKey(@Nonnull ReferenceCountedKey<K> currentKey) {
+    public void setCurrentKey(@Nonnull K currentKey) {
         this.currentKey = currentKey;
         this.inCallBackProcess = false;
     }
 
     @Override
-    public void setCurrentKey(@Nonnull ReferenceCountedKey<K> currentKey, boolean invokeByCallBack) {
+    public void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack) {
         setCurrentKey(currentKey);
         this.inCallBackProcess = invokeByCallBack;
     }

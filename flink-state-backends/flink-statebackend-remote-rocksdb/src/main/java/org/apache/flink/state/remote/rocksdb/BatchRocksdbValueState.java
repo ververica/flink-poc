@@ -126,7 +126,7 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractRemoteRocksdbState<
     public V value() throws IOException {
         try {
             byte[] valueBytes =
-                    db.get(columnFamily, serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey().getRawKey()));
+                    db.get(columnFamily, serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey()));
 
             if (valueBytes == null) {
                 return getDefaultValue();
@@ -150,7 +150,7 @@ public class BatchRocksdbValueState<K, N, V> extends AbstractRemoteRocksdbState<
             db.put(
                     columnFamily,
                     writeOptions,
-                    serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey().getRawKey()),
+                    serializeCurrentKeyWithGroupAndNamespace(backend.getCurrentKey()),
                     serializeValue(value));
         } catch (RocksDBException e) {
             throw new IOException("Error while adding data to RocksDB", e);

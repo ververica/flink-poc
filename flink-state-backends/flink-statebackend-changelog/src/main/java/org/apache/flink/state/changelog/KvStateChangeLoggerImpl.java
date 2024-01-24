@@ -85,7 +85,7 @@ class KvStateChangeLoggerImpl<Key, Value, Ns> extends AbstractStateChangeLogger<
 
     @Override
     protected void serializeScope(Ns ns, DataOutputView out) throws IOException {
-        keySerializer.serialize(keyContext.getCurrentKey().getRawKey(), out);
+        keySerializer.serialize(keyContext.getCurrentKey(), out);
         namespaceSerializer.serialize(ns, out);
     }
 

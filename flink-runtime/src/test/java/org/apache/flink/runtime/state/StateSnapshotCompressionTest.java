@@ -25,7 +25,6 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.async.ReferenceCountedKey;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackend;
 import org.apache.flink.runtime.state.heap.HeapKeyedStateBackendBuilder;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSetFactory;
@@ -137,16 +136,16 @@ class StateSnapshotCompressionTest {
                     stateBackend.createOrUpdateInternalState(
                             new VoidNamespaceSerializer(), stateDescriptor);
 
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "A"));
+            stateBackend.setCurrentKey("A");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             state.update("42");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "B"));
+            stateBackend.setCurrentKey("B");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             state.update("43");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "C"));
+            stateBackend.setCurrentKey("C");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             state.update("44");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "D"));
+            stateBackend.setCurrentKey("D");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             state.update("45");
             CheckpointStreamFactory streamFactory = new MemCheckpointStreamFactory(4 * 1024 * 1024);
@@ -175,16 +174,16 @@ class StateSnapshotCompressionTest {
                     stateBackend.createOrUpdateInternalState(
                             new VoidNamespaceSerializer(), stateDescriptor);
 
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "A"));
+            stateBackend.setCurrentKey("A");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             assertThat(state.value()).isEqualTo("42");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "B"));
+            stateBackend.setCurrentKey("B");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             assertThat(state.value()).isEqualTo("43");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "C"));
+            stateBackend.setCurrentKey("C");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             assertThat(state.value()).isEqualTo("44");
-            stateBackend.setCurrentKey(new ReferenceCountedKey<>(0, "D"));
+            stateBackend.setCurrentKey("D");
             state.setCurrentNamespace(VoidNamespace.INSTANCE);
             assertThat(state.value()).isEqualTo("45");
 
