@@ -141,7 +141,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.flink.configuration.TaskManagerOptions.BUFFER_DEBLOAT_PERIOD;
 import static org.apache.flink.util.ExceptionUtils.firstOrSuppressed;
@@ -315,8 +314,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
     private boolean shouldInterruptOnCancel = true;
 
     @Nullable private final AvailabilityProvider changelogWriterAvailabilityProvider;
-
-    private final AtomicInteger numberOfStateOngoingReq = new AtomicInteger(0);
 
     // ------------------------------------------------------------------------
 
@@ -707,8 +704,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         ? timerServiceProvider
                         : InternalTimeServiceManagerImpl::create,
                 () -> canceled,
-                mainMailboxExecutor,
-                (val) -> numberOfStateOngoingReq.addAndGet(val));
+                mainMailboxExecutor);
     }
 
     protected Counter setupNumRecordsInCounter(StreamOperator streamOperator) {
@@ -1173,9 +1169,6 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
         CompletableFuture<Boolean> result = new CompletableFuture<>();
         mainMailboxExecutor.execute(
                 () -> {
-                    while (numberOfStateOngoingReq.get() > 0) {
-                        mainMailboxExecutor.yield();
-                    }
                     try {
                         boolean noUnfinishedInputGates =
                                 Arrays.stream(getEnvironment().getAllInputGates())

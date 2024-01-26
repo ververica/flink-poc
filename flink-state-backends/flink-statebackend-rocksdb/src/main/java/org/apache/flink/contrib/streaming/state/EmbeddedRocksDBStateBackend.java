@@ -48,6 +48,7 @@ import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.AbstractID;
@@ -428,7 +429,6 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
                 stateHandles,
                 cancelStreamRegistry,
                 1.0,
-                null,
                 null);
     }
 
@@ -446,8 +446,7 @@ public class EmbeddedRocksDBStateBackend extends AbstractManagedMemoryStateBacke
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq)
+            BatchingComponent<?, K> batchingComponent)
             throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded

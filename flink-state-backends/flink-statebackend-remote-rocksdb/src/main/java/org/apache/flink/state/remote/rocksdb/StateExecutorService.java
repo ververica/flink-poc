@@ -1,0 +1,118 @@
+package org.apache.flink.state.remote.rocksdb;
+
+import org.apache.flink.api.common.state.async.StateUncheckedIOException;
+import org.apache.flink.runtime.state.async.StateExecutor;
+import org.apache.flink.runtime.state.async.StateRequest;
+import org.apache.flink.state.remote.rocksdb.internal.RemoteRocksdbValueState;
+import org.apache.flink.state.remote.rocksdb.internal.RemoteState;
+import org.apache.flink.util.FlinkRuntimeException;
+import org.apache.flink.util.concurrent.FutureUtils;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class StateExecutorService<K> implements StateExecutor<K> {
+    
+    private final ExecutorService executorService;
+
+    private final Set<RemoteState> registeredStates = new HashSet<>();
+    
+    public StateExecutorService(int ioParallelism) {
+        this.executorService = Executors.newFixedThreadPool(ioParallelism + 1);
+    }
+
+    public synchronized <S extends RemoteState> void registerState(S state) {
+        registeredStates.add(state);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> executeBatchRequests(Iterable<StateRequest<?, K, ?, ?>> stateRequests) {
+        Map<RemoteState, Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>>> requestClassifier = new HashMap<>();
+        for (StateRequest<?, K, ?, ?> request : stateRequests) {
+            Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>> sameStateRequests =
+                    requestClassifier.computeIfAbsent((RemoteState) request.getState(), (key) -> new HashMap<>());
+
+            List<StateRequest<?, K, ?, ?>> sameTypeRequests =
+                    sameStateRequests.computeIfAbsent(request.getQuestType(), (key) -> new ArrayList<>());
+            sameTypeRequests.add(request);
+        }
+
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        CompletableFuture.runAsync(() -> {
+            for (Map.Entry<RemoteState, Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>>>
+                    entry : requestClassifier.entrySet()) {
+                if (!registeredStates.contains(entry.getKey())) {
+                    throw new FlinkRuntimeException("unregistered state");
+                }
+                if (entry.getKey() instanceof RemoteRocksdbValueState) {
+                    processValueStateRequest((RemoteRocksdbValueState<K, ?, ?>) entry.getKey(), entry.getValue());
+                } else {
+                    throw new UnsupportedOperationException("Unsupported state type");
+                }
+            }
+            future.complete(true);
+        }, executorService);
+        
+        return future;
+    }
+
+    private <N, V> void processValueStateRequest(RemoteRocksdbValueState<K, N, V> valueState,
+                                                 Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>> requests) {
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (Map.Entry<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>> entry : requests.entrySet()) {
+            if (entry.getKey() == StateRequest.RequestType.GET) {
+                processValueStateGetRequests(valueState, entry.getValue(), futures);
+            } else if (entry.getKey() == StateRequest.RequestType.PUT) {
+                processValueStatePutRequests(valueState, entry.getValue(), futures);
+            } else {
+                throw new UnsupportedOperationException("Unsupported request type");
+            }
+        }
+        try {
+            FutureUtils.completeAll(futures).get();
+        } catch (InterruptedException | ExecutionException | CompletionException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private <N, V> void processValueStateGetRequests(RemoteRocksdbValueState<K, N, V> valueState,
+            List<StateRequest<?, K, ?, ?>> valueGetRequests, List<CompletableFuture<Void>> futures) {
+        //TODO Optimize performance with the multiGet interface
+        for (StateRequest<?, K, ?, ?> getRequest : valueGetRequests) {
+            StateRequest<?, K, Void, V> request = (StateRequest<?, K, Void, V>) getRequest;
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    V value = valueState.get(request.getKey());
+                    request.getFuture().complete(value);
+                } catch (IOException e) {
+                    throw new StateUncheckedIOException(e);
+                }
+            }, executorService));
+        }
+    }
+
+    private <N, V> void processValueStatePutRequests(RemoteRocksdbValueState<K, N, V> valueState,
+            List<StateRequest<?, K, ?, ?>> valueGetRequests, List<CompletableFuture<Void>> futures) {
+        futures.add(CompletableFuture.runAsync(() -> {
+            for (StateRequest<?, K, ?, ?> putRequest : valueGetRequests) {
+                StateRequest<?, K, V, Void> request = (StateRequest<?, K, V, Void>) putRequest;
+                try {
+                    valueState.put(request.getKey(), request.getValue());
+                    request.getFuture().complete(null);
+                } catch (IOException e) {
+                    throw new StateUncheckedIOException(e);
+                }
+            }
+        }, executorService));
+    }
+}

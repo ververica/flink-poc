@@ -26,12 +26,10 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.state.async.AsyncKeyedStateFactory;
-import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.util.Disposable;
-import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.Collection;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -56,19 +54,6 @@ public interface KeyedStateBackend<K>
         return false;
     }
 
-    default Consumer<RunnableWithException> getRegisterCallBackFunc() {
-        throw new UnsupportedOperationException();
-    }
-
-    default Consumer<Integer> updateOngoingStateReqFunc() {
-        throw new UnsupportedOperationException();
-    }
-
-    default BatchCacheStateConfig getBatchCacheStateConfig() {
-       throw new UnsupportedOperationException();
-    }
-
-
     default void setCurrentKeys(Collection<K> key) {
         throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
     }
@@ -79,6 +64,14 @@ public interface KeyedStateBackend<K>
 
     default void clearCurrentKeysCache() {
         throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
+    }
+
+    default <R> void setCurrentRecordContext(RecordContext<K, R> recordContext) {
+        throw new UnsupportedOperationException();
+    }
+
+    default <R> RecordContext<K, R> getCurrentRecordContext() {
+        throw new UnsupportedOperationException();
     }
 
     /** @return Serializer of the key. */
@@ -172,6 +165,14 @@ public interface KeyedStateBackend<K>
             TypeSerializer<N> namespaceSerializer,
             StateDescriptor<S, ?> stateDescriptor)
             throws Exception;
+
+    default <N, S extends AsyncState> S getPartitionedState(
+            N namespace,
+            TypeSerializer<N> namespaceSerializer,
+            AsyncStateDescriptor<S, ?> stateDescriptor)
+            throws Exception {
+        throw new UnsupportedOperationException("Support Async state");
+    }
 
     @Override
     void dispose();

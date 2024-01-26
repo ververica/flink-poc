@@ -33,18 +33,25 @@ import org.apache.flink.contrib.streaming.state.RocksDBWriteBatchWrapper;
 import org.apache.flink.contrib.streaming.state.snapshot.RocksDBSnapshotStrategyBase;
 import org.apache.flink.contrib.streaming.state.ttl.RocksDbTtlCompactFiltersManager;
 import org.apache.flink.core.fs.CloseableRegistry;
+import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.CheckpointStreamFactory;
+import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.PriorityQueueSetFactory;
 import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
+import org.apache.flink.runtime.state.SnapshotResult;
+import org.apache.flink.runtime.state.SnapshotStrategyRunner;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
-import org.apache.flink.runtime.state.async.BatchCacheStateConfig;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapper;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBMode;
+import org.apache.flink.state.remote.rocksdb.async.AsyncRocksdbValueState;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.ResourceGuard;
 import org.apache.flink.util.function.RunnableWithException;
 
@@ -58,27 +65,31 @@ import javax.annotation.Nonnull;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RunnableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<K> {
+import static org.apache.flink.runtime.state.SnapshotExecutionType.ASYNCHRONOUS;
+
+public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBackend<K> {
 
     private static final Logger LOG = LoggerFactory.getLogger(RemoteRocksDBKeyedStateBackend.class);
+
+    protected final Map<String, AsyncState> createdAsyncKVStates;
 
     private RemoteRocksDBMode remoteRocksDBMode;
     private String workingDir;
 
-    private final BatchCacheStateConfig batchCacheStateConfig;
+    private final StateExecutorService<K> stateExecutorService;
 
-    private final BatchParallelIOExecutor<K> batchParallelIOExecutor;
-
-    private final Consumer<RunnableWithException> registerCallBackFunc;
-
-    private final Consumer<Integer> updateOngoingStateReq;
+    private final BatchingComponent<R, K> batchingComponent;
 
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -110,8 +121,7 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             RocksDbTtlCompactFiltersManager ttlCompactFiltersManager,
             InternalKeyContext<K> keyContext,
             long writeBatchSize,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq) {
+            BatchingComponent<R, K> batchingComponent) {
         super(
                 userCodeClassLoader,
                 instanceBasePath,
@@ -140,16 +150,14 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
                 writeBatchSize);
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
-        this.batchCacheStateConfig = new BatchCacheStateConfig(enableCacheLayer);
-        ExecutorService executor = Executors.newFixedThreadPool(ioParallelism);
-        this.batchParallelIOExecutor = new BatchParallelIOExecutor<>(executor);
-        this.registerCallBackFunc = registerCallBackFunc;
-        this.updateOngoingStateReq = updateOngoingStateReq;
+        this.createdAsyncKVStates = new HashMap<>();
+        this.stateExecutorService = new StateExecutorService<>(ioParallelism);
+        this.batchingComponent = batchingComponent;
         LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
                 remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
     }
     
-    RocksDB getDB() {
+    public RocksDB getDB() {
         return db;
     }
 
@@ -163,19 +171,12 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         return true;
     }
 
-    @Override
-    public Consumer<RunnableWithException> getRegisterCallBackFunc() {
-        return registerCallBackFunc;
+    public StateExecutorService<K> getStateExecutorService() {
+        return stateExecutorService;
     }
 
-    @Override
-    public Consumer<Integer> updateOngoingStateReqFunc() {
-        return updateOngoingStateReq;
-    }
-
-    @Override
-    public BatchCacheStateConfig getBatchCacheStateConfig() {
-        return batchCacheStateConfig;
+    public BatchingComponent<R, K> getBatchingComponent() {
+        return batchingComponent;
     }
 
     @Override
@@ -185,19 +186,55 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
             @Nonnull StateSnapshotTransformer.StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
             boolean allowFutureMetadataUpdates)
             throws Exception {
+        Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>> registerResult =
+                tryRegisterKvStateInformation(
+                        stateDesc,
+                        namespaceSerializer,
+                        snapshotTransformFactory,
+                        allowFutureMetadataUpdates);
+        if (!allowFutureMetadataUpdates) {
+            // Config compact filter only when no future metadata updates
+            ttlCompactFiltersManager.configCompactFilter(
+                    stateDesc, registerResult.f1.getStateSerializer());
+        }
 
-        State state = createOrUpdateInternalState(namespaceSerializer, convertStateDescriptor(stateDesc), snapshotTransformFactory, allowFutureMetadataUpdates);
-        // TODO: Implement
-        // AsyncValueState v = Factory.wrap(ValueState)
-        // AsyncValueState v1 = Batching.wrap(v)
-        return null;
+        return createState(stateDesc, registerResult);
     }
 
-    private <S extends State, AS extends AsyncState, SV> StateDescriptor<S, SV> convertStateDescriptor(@Nonnull AsyncStateDescriptor<AS, SV> stateDesc) {
-        if (stateDesc instanceof AsyncValueStateDescriptor) {
-            return (StateDescriptor<S, SV>) new ValueStateDescriptor<>(stateDesc.getName(), stateDesc.getSerializer());
+    private static final Map<StateDescriptor.Type, StateCreateFactory> STATE_CREATE_FACTORIES =
+            Stream.of(
+                            Tuple2.of(
+                                    StateDescriptor.Type.VALUE,
+                                    (StateCreateFactory) AsyncRocksdbValueState::create))
+                    .collect(Collectors.toMap(t -> t.f0, t -> t.f1));
+
+    private <N, SV, S extends AsyncState, IS extends S> IS createState(
+            AsyncStateDescriptor<S, SV> stateDesc,
+            Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                    registerResult)
+            throws Exception {
+        @SuppressWarnings("unchecked")
+        IS createdState = (IS) createdAsyncKVStates.get(stateDesc.getName());
+        if (createdState == null) {
+            StateCreateFactory stateCreateFactory = STATE_CREATE_FACTORIES.get(stateDesc.getType());
+            if (stateCreateFactory == null) {
+                throw new FlinkRuntimeException(stateNotSupportedMessage(stateDesc));
+            }
+            createdState =
+                    stateCreateFactory.createState(
+                            stateDesc, registerResult, RemoteRocksDBKeyedStateBackend.this);
+        } else {
+            throw new UnsupportedOperationException("Don't support updating yet");
         }
-        return null;
+
+        createdAsyncKVStates.put(stateDesc.getName(), createdState);
+        return createdState;
+    }
+
+    private  <S extends AsyncState, SV> String stateNotSupportedMessage(
+            AsyncStateDescriptor<S, SV> stateDesc) {
+        return String.format(
+                "State %s is not supported by %s", stateDesc.getClass(), this.getClass());
     }
 
     @Override
@@ -208,13 +245,24 @@ public class RemoteRocksDBKeyedStateBackend<K> extends RocksDBKeyedStateBackend<
         //TODO
     }
 
-    public BatchParallelIOExecutor<K> getBatchParallelIOExecutor() {
-        return batchParallelIOExecutor;
+    protected interface StateCreateFactory {
+        <R, K, N, SV, S extends AsyncState, IS extends S> IS createState(
+                AsyncStateDescriptor<S, SV> stateDesc,
+                Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
+                        registerResult,
+                RemoteRocksDBKeyedStateBackend<R, K> backend)
+                throws Exception;
     }
 
     @Override
-    public void close() throws IOException {
-        batchParallelIOExecutor.close();
-        super.close();
+    public RunnableFuture<SnapshotResult<KeyedStateHandle>> snapshot(
+            final long checkpointId,
+            final long timestamp,
+            @Nonnull final CheckpointStreamFactory streamFactory,
+            @Nonnull CheckpointOptions checkpointOptions)
+            throws Exception {
+        batchingComponent.drainAllInFlightDataBeforeStateSnapshot();
+        return super.snapshot(checkpointId, timestamp, streamFactory, checkpointOptions);
     }
+
 }

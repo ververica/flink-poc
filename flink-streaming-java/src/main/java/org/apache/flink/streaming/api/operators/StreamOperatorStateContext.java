@@ -22,7 +22,10 @@ import org.apache.flink.runtime.state.CheckpointableKeyedStateBackend;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.util.CloseableIterable;
+
+import javax.annotation.Nullable;
 
 import java.util.OptionalLong;
 
@@ -53,6 +56,8 @@ public interface StreamOperatorStateContext {
      * non-keyed operators.
      */
     CheckpointableKeyedStateBackend<?> keyedStateBackend();
+
+    @Nullable BatchingComponent<?, ?> getBatchingComponent();
 
     /**
      * Returns the internal timer service manager for the stream operator. This method returns null

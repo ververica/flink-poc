@@ -129,12 +129,10 @@ public class WordCountTest {
                 if (currentValue != null) {
                     asyncWordCounter.update(currentValue + 1).then(empty -> {
                         out.collect(currentValue + 1L);
-                        asyncWordCounter.commit();
                     });
                 } else {
                     asyncWordCounter.update(1).then(empty -> {
                         out.collect(1L);
-                        asyncWordCounter.commit();
                     });
                 }
             });

@@ -29,7 +29,7 @@ import java.util.function.Function;
 @PublicEvolving
 public interface StateFuture<T> {
 
-    <R> StateFuture<R> then(Function<? super T, ? extends R> action);
+    <C> StateFuture<C> then(Function<? super T, ? extends C> action);
 
     StateFuture<Void> then(Consumer<? super T> action);
 }

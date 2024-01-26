@@ -35,6 +35,7 @@ import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.StateDescriptorBase;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncValueState;
@@ -242,7 +243,7 @@ public class StreamingRuntimeContext extends AbstractRuntimeUDFContext {
     }
 
     private KeyedStateStore checkPreconditionsAndGetKeyedStateStore(
-            StateDescriptor<?, ?> stateDescriptor) {
+            StateDescriptorBase<?> stateDescriptor) {
         checkNotNull(stateDescriptor, "The state properties must not be null");
         checkNotNull(
                 keyedStateStore,

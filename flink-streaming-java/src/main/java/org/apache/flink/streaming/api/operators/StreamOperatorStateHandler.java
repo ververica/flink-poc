@@ -53,6 +53,8 @@ import org.apache.flink.runtime.state.StateInitializationContextImpl;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.StateSnapshotContextSynchronousImpl;
+import org.apache.flink.runtime.state.async.BatchingComponent;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.util.CloseableIterable;
 import org.apache.flink.util.IOUtils;
 
@@ -88,6 +90,8 @@ public class StreamOperatorStateHandler {
     @Nullable private final DefaultKeyedStateStore keyedStateStore;
     private final OperatorStateBackend operatorStateBackend;
     private final StreamOperatorStateContext context;
+    
+    private final BatchingComponent<?, ?> batchingComponent;
 
     public StreamOperatorStateHandler(
             StreamOperatorStateContext context,
@@ -112,6 +116,7 @@ public class StreamOperatorStateHandler {
         } else {
             keyedStateStore = null;
         }
+        this.batchingComponent = context.getBatchingComponent();
     }
 
     public void initializeOperatorState(CheckpointedStreamOperator streamOperator)
@@ -325,6 +330,11 @@ public class StreamOperatorStateHandler {
         return (KeyedStateBackend<K>) keyedStateBackend;
     }
 
+    @SuppressWarnings("unchecked")
+    public <R, K> BatchingComponent<R, K> getBatchingComponent() {
+        return (BatchingComponent<R, K>) batchingComponent;
+    }
+
     public OperatorStateBackend getOperatorStateBackend() {
         return operatorStateBackend;
     }
@@ -423,6 +433,22 @@ public class StreamOperatorStateHandler {
     public void clearCurrentKeysCache() {
         if (keyedStateBackend != null) {
             keyedStateBackend.clearCurrentKeysCache();
+        }
+    }
+
+    public <R> void setCurrentRecordContext(RecordContext<?, R> recordContext) {
+        if (keyedStateBackend != null) {
+            @SuppressWarnings("rawtypes")
+            RecordContext currentContext = recordContext;
+            keyedStateBackend.setCurrentRecordContext(currentContext);
+        }
+    }
+
+    public <R> RecordContext<?, R> getCurrentRecordContext() {
+        if (keyedStateBackend != null) {
+            return keyedStateBackend.getCurrentRecordContext();
+        } else {
+            throw new RuntimeException("Exception when getCurrentRecordContext");
         }
     }
 

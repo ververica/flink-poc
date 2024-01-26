@@ -32,6 +32,7 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.changelog.ChangelogStateBackendHandle;
 import org.apache.flink.runtime.state.changelog.ChangelogStateBackendHandle.ChangelogStateBackendHandleImpl;
 import org.apache.flink.runtime.state.delegate.DelegatingStateBackend;
@@ -135,8 +136,7 @@ public abstract class AbstractChangelogStateBackend
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq)
+            BatchingComponent<?, K> batchingComponent)
             throws Exception {
         return restore(
                 env,
@@ -160,8 +160,7 @@ public abstract class AbstractChangelogStateBackend
                                         baseHandles,
                                         cancelStreamRegistry,
                                         managedMemoryFraction,
-                                        registerCallBackFunc,
-                                        updateOngoingStateReq));
+                                        batchingComponent));
     }
 
     @Override

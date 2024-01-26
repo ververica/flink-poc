@@ -1,26 +1,5 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package org.apache.flink.state.remote.rocksdb.internal;
 
-package org.apache.flink.state.remote.rocksdb;
-
-import org.apache.flink.api.common.state.State;
-import org.apache.flink.api.common.state.async.AsyncState;
-import org.apache.flink.api.common.state.async.StateFuture;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputDeserializer;
 import org.apache.flink.core.memory.DataOutputSerializer;
@@ -29,9 +8,7 @@ import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
-import org.apache.flink.runtime.state.async.internal.InternalAsyncState;
-import org.apache.flink.runtime.state.internal.InternalKvState;
-
+import org.apache.flink.state.remote.rocksdb.RemoteRocksDBKeyedStateBackend;
 import org.apache.flink.util.Preconditions;
 
 import org.rocksdb.ColumnFamilyHandle;
@@ -40,10 +17,7 @@ import org.rocksdb.WriteOptions;
 
 import java.io.IOException;
 
-/**
- * The abstract class for rocksdb batch State.
- */
-public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsyncState<K, N, V>, AsyncState {
+public abstract class AbstractRemoteRocksdbState<K, N, V> implements RemoteRocksdbKVState<K, N, V> {
 
     protected TypeSerializer<K> keySerializer;
 
@@ -62,11 +36,9 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsy
 
     protected final WriteOptions writeOptions;
 
-    protected final RemoteRocksDBKeyedStateBackend<K> backend;
+    protected final RemoteRocksDBKeyedStateBackend<?, K> backend;
 
     protected final RocksDB db;
-
-    protected final BatchParallelIOExecutor<K> parallelIOExecutor;
 
     private final ThreadLocal<SerializedCompositeKeyBuilder<K>> sharedKeyNamespaceSerializer;
 
@@ -77,7 +49,7 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsy
     private final int maxParallelism;
 
     protected AbstractRemoteRocksdbState(
-            RemoteRocksDBKeyedStateBackend<K> backend,
+            RemoteRocksDBKeyedStateBackend<?, K> backend,
             ColumnFamilyHandle columnFamily,
             TypeSerializer<K> keySerializer,
             TypeSerializer<N> namespaceSerializer,
@@ -99,13 +71,12 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsy
                 new SerializedCompositeKeyBuilder<>(
                         keySerializer,
                         CompositeKeySerializationUtils.computeRequiredBytesInKeyGroupPrefix(
-                               maxParallelism),
+                                maxParallelism),
                         32));
-        this.parallelIOExecutor = backend.getBatchParallelIOExecutor();
     }
 
     @Override
-    public TypeSerializer getKeySerializer() {
+    public TypeSerializer<K> getKeySerializer() {
         return keySerializer;
     }
 
@@ -128,11 +99,6 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsy
         }
     }
 
-    @Override
-    public StateFuture<Void> clear() {
-        throw new UnsupportedOperationException();
-    }
-
     protected byte[] serializeCurrentKeyWithGroupAndNamespace(K key) {
         SerializedCompositeKeyBuilder<K> keyBuilder = sharedKeyNamespaceSerializer.get();
         keyBuilder.setKeyAndKeyGroup(key, KeyGroupRangeAssignment.assignToKeyGroup(key, maxParallelism));
@@ -149,19 +115,5 @@ public abstract class AbstractRemoteRocksdbState<K, N, V> implements InternalAsy
             throws IOException {
         serializer.serialize(value, outputView);
         return outputView.getCopyOfBuffer();
-    }
-
-    @Override
-    public void setCurrentNamespace(N namespace) {
-        this.currentNamespace = namespace;
-    }
-
-    @Override
-    public byte[] getSerializedValue(
-            byte[] serializedKeyAndNamespace,
-            TypeSerializer<K> safeKeySerializer,
-            TypeSerializer<N> safeNamespaceSerializer,
-            TypeSerializer<V> safeValueSerializer) throws Exception {
-        throw new UnsupportedOperationException();
     }
 }

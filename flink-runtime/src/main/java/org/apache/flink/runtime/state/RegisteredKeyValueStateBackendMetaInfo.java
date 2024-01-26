@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state;
 
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.StateDescriptorBase;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
@@ -230,7 +231,7 @@ public class RegisteredKeyValueStateBackendMetaInfo<N, S> extends RegisteredStat
         return new RegisteredKeyValueStateBackendMetaInfo<>(snapshot());
     }
 
-    public void checkStateMetaInfo(StateDescriptor<?, ?> stateDesc) {
+    public void checkStateMetaInfo(StateDescriptorBase<?> stateDesc) {
 
         Preconditions.checkState(
                 Objects.equals(stateDesc.getName(), getName()),

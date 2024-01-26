@@ -40,6 +40,7 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 
@@ -139,8 +140,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq) throws IOException {
+            BatchingComponent<?, K> batchingComponent) throws IOException {
 
         // first, make sure that the RocksDB JNI library is loaded
         // we do this explicitly here to have better error handling
@@ -215,8 +215,7 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
                                 stateHandles,
                                 keyGroupCompressionDecorator,
                                 cancelStreamRegistry,
-                                registerCallBackFunc)
-                                .setUpdateOngoingStateReqFunc(updateOngoingStateReq)
+                                batchingComponent)
                         .setEnableIncrementalCheckpointing(isIncrementalCheckpointsEnabled())
                         .setNumberOfTransferingThreads(getNumberOfTransferThreads())
                         .setNativeMetricOptions(

@@ -21,6 +21,8 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.StateDescriptorBase;
+import org.apache.flink.api.common.state.async.AsyncState;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
@@ -650,7 +652,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
     protected  <N, S extends State, SV, SEV>
             Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
                     tryRegisterKvStateInformation(
-                            StateDescriptor<S, SV> stateDesc,
+                            StateDescriptorBase<SV> stateDesc,
                             TypeSerializer<N> namespaceSerializer,
                             @Nonnull StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
                             boolean allowFutureMetadataUpdates)
@@ -722,7 +724,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
             RegisteredKeyValueStateBackendMetaInfo<N, SV> updateRestoredStateMetaInfo(
                     Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>>
                             oldStateInfo,
-                    StateDescriptor<S, SV> stateDesc,
+                    StateDescriptorBase<SV> stateDesc,
                     TypeSerializer<N> namespaceSerializer,
                     TypeSerializer<SV> stateSerializer)
                     throws Exception {
@@ -774,7 +776,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
      */
     @SuppressWarnings("unchecked")
     private <N, S extends State, SV> void migrateStateValues(
-            StateDescriptor<S, SV> stateDesc,
+            StateDescriptorBase<SV> stateDesc,
             Tuple2<ColumnFamilyHandle, RegisteredKeyValueStateBackendMetaInfo<N, SV>> stateMetaInfo)
             throws Exception {
 
@@ -809,7 +811,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         // we need to get an actual state instance because migration is different
         // for different state types. For example, ListState needs to deal with
         // individual elements
-        State state = createState(stateDesc, stateMetaInfo);
+        State state = createState((StateDescriptor<S, SV>) stateDesc, stateMetaInfo);
         if (!(state instanceof AbstractRocksDBState)) {
             throw new FlinkRuntimeException(
                     "State should be an AbstractRocksDBState but is " + state);
@@ -925,7 +927,7 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         return createdState;
     }
 
-    protected  <S extends State, SV> String stateNotSupportedMessage(
+    private  <S extends State, SV> String stateNotSupportedMessage(
             StateDescriptor<S, SV> stateDesc) {
         return String.format(
                 "State %s is not supported by %s", stateDesc.getClass(), this.getClass());
