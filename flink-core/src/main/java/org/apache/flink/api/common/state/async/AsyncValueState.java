@@ -33,5 +33,4 @@ public interface AsyncValueState<T> extends AsyncState {
 
     StateFuture<Void> update(T value);
 
-    void commit();
 }

@@ -11,58 +11,68 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Internal
-public class StateFutureImpl<K, V> implements StateFuture<V> {
+public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
 
-    private CompletableFuture<V> future;
+    private final CompletableFuture<V> future;
 
     private final K currentKey;
+
+    private final RecordContext<K, R> currentRecord;
 
     private final InternalKeyContext<K> keyContext;
 
     private final Consumer<RunnableWithException> registerMailBoxCallBackFunc;
 
-    private final Consumer<Integer> updateOngoingStateReq;
-
     public StateFutureImpl(K currentKey,
+                           RecordContext<K, R> currentRecord,
                            InternalKeyContext<K> internalKeyContext,
-                           Consumer<RunnableWithException> registerMailBoxCallBackFunc,
-                           Consumer<Integer> updateOngoingStateReq) {
+                           Consumer<RunnableWithException> registerMailBoxCallBackFunc) {
         this.future = new CompletableFuture<>();
         this.currentKey = currentKey;
+        this.currentRecord = currentRecord;
         this.keyContext = internalKeyContext;
         this.registerMailBoxCallBackFunc = registerMailBoxCallBackFunc;
-        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
+    @Override
     public void complete(V value) {
         future.complete(value);
     }
 
-
     @Override
-    public <R> StateFuture<R> then(Function<? super V, ? extends R> action) {
-        StateFutureImpl<K, R> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc, updateOngoingStateReq);
+    public <C> StateFuture<C> then(Function<? super V, ? extends C> action) {
+        currentRecord.retainRef();
+        StateFutureImpl<R, K, C> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
-            updateOngoingStateReq.accept(-1);
             registerMailBoxCallBackFunc.accept(() -> {
-            keyContext.setCurrentKey(currentKey, true);
-            R result = action.apply(value);
-            stateFuture.complete(result);
-        });});
+                keyContext.setCurrentKey(currentKey);
+                keyContext.setCurrentRecordContext(currentRecord);
+                C result = action.apply(value);
+                stateFuture.complete(result);
+                currentRecord.releaseRef();
+            });
+        });
         return stateFuture;
     }
 
     @Override
     public StateFuture<Void> then(Consumer<? super V> action) {
-        StateFutureImpl<K, Void> stateFuture = new StateFutureImpl<>(currentKey, keyContext, registerMailBoxCallBackFunc, updateOngoingStateReq);
+        currentRecord.retainRef();
+        StateFutureImpl<R, K, Void> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
-            updateOngoingStateReq.accept(-1);
             registerMailBoxCallBackFunc.accept(() -> {
-                keyContext.setCurrentKey(currentKey, true);
+                keyContext.setCurrentKey(currentKey);
+                keyContext.setCurrentRecordContext(currentRecord);
                 action.accept(value);
                 stateFuture.complete(null);
+                currentRecord.releaseRef();
             });
         });
         return stateFuture;
+    }
+
+    @Override
+    public RecordContext<K, R> getCurrentRecordContext() {
+        return currentRecord;
     }
 }

@@ -21,6 +21,7 @@ package org.apache.flink.contrib.streaming.state;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.StateDescriptorBase;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
@@ -45,7 +46,7 @@ abstract class RocksDBSnapshotTransformFactoryAdaptor<SV, SEV>
 
     @SuppressWarnings("unchecked")
     static <SV, SEV> StateSnapshotTransformFactory<SV> wrapStateSnapshotTransformFactory(
-            StateDescriptor<?, SV> stateDesc,
+            StateDescriptorBase<SV> stateDesc,
             StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
             TypeSerializer<SV> stateSerializer) {
         if (stateDesc instanceof ListStateDescriptor) {

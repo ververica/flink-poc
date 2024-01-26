@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.state.KeyGroupRange;
+import org.apache.flink.runtime.state.async.RecordContext;
 
 import javax.annotation.Nonnull;
 
@@ -71,4 +72,8 @@ public interface InternalKeyContext<K> {
 
     /** Used by states to access the current key. */
     void setCurrentKeys(Collection<K> keys);
+
+    <R> void setCurrentRecordContext(RecordContext<K, R> recordContext);
+
+    <R> RecordContext<K, R> getCurrentRecordContext();
 }

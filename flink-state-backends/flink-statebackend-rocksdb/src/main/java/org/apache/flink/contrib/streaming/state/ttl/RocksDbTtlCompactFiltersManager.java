@@ -21,6 +21,7 @@ package org.apache.flink.contrib.streaming.state.ttl;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.StateDescriptorBase;
 import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.base.ListSerializer;
@@ -110,7 +111,7 @@ public class RocksDbTtlCompactFiltersManager {
     }
 
     public void configCompactFilter(
-            @Nonnull StateDescriptor<?, ?> stateDesc, TypeSerializer<?> stateSerializer) {
+            @Nonnull StateDescriptorBase<?> stateDesc, TypeSerializer<?> stateSerializer) {
         StateTtlConfig ttlConfig = stateDesc.getTtlConfig();
         if (ttlConfig.isEnabled() && ttlConfig.getCleanupStrategies().inRocksdbCompactFilter()) {
             FlinkCompactionFilterFactory compactionFilterFactory =

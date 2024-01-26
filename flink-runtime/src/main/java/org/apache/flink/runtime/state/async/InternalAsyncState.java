@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.state.async.internal;
+package org.apache.flink.runtime.state.async;
 
 import org.apache.flink.api.common.state.async.AsyncState;
 import org.apache.flink.api.common.typeutils.TypeSerializer;

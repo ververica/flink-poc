@@ -29,13 +29,12 @@ import org.apache.flink.runtime.checkpoint.CheckpointType;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.RestoreMode;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
-import org.apache.flink.util.function.RunnableWithException;
 
 import javax.annotation.Nonnull;
 
 import java.util.Collection;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -145,8 +144,7 @@ public interface StateBackend extends java.io.Serializable {
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq)
+            BatchingComponent<?, K> batchingComponent)
             throws Exception {
 
         // ignore managed memory fraction by default

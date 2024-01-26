@@ -33,6 +33,8 @@ import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncValueState;
 import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.util.Preconditions;
@@ -124,6 +126,12 @@ public class DefaultKeyedStateStore implements KeyedStateStore {
     }
 
     protected <S extends State> S getPartitionedState(StateDescriptor<S, ?> stateDescriptor)
+            throws Exception {
+        return keyedStateBackend.getPartitionedState(
+                VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescriptor);
+    }
+
+    protected <S extends AsyncState> S getPartitionedState(AsyncStateDescriptor<S, ?> stateDescriptor)
             throws Exception {
         return keyedStateBackend.getPartitionedState(
                 VoidNamespace.INSTANCE, VoidNamespaceSerializer.INSTANCE, stateDescriptor);

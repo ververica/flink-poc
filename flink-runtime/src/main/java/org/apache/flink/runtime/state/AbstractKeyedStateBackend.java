@@ -30,8 +30,8 @@ import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
 import org.apache.flink.runtime.checkpoint.SnapshotType;
 import org.apache.flink.runtime.query.TaskKvStateRegistry;
-import org.apache.flink.runtime.state.async.BatchCacheStateFactory;
-import org.apache.flink.runtime.state.async.internal.InternalAsyncState;
+import org.apache.flink.runtime.state.async.InternalAsyncState;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.internal.InternalKvState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
@@ -276,6 +276,15 @@ public abstract class AbstractKeyedStateBackend<K>
     }
 
     @Override
+    public <R> void setCurrentRecordContext(RecordContext<K, R> recordContext) {
+        this.keyContext.setCurrentRecordContext(recordContext);
+    }
+
+    public <R> RecordContext<K, R> getCurrentRecordContext() {
+        return this.keyContext.getCurrentRecordContext();
+    }
+
+    @Override
     public boolean isInCallBackProcess() {
         return keyContext.isInCallBackProcess();
     }
@@ -398,15 +407,6 @@ public abstract class AbstractKeyedStateBackend<K>
                             stateDescriptor,
                             latencyTrackingStateConfig);
 
-            if (isSupportBatchInterfaces()) {
-                kvState = BatchCacheStateFactory.createStateAndWrapWithBatchCacheIfEnabled(
-                        kvState,
-                        stateDescriptor,
-                        getBatchCacheStateConfig(),
-                        keyContext,
-                        getRegisterCallBackFunc(),
-                        updateOngoingStateReqFunc());
-            }
             keyValueStatesByName.put(stateDescriptor.getName(), kvState);
             publishQueryableStateIfEnabled(stateDescriptor, kvState);
         }

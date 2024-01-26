@@ -44,6 +44,7 @@ import org.apache.flink.runtime.state.StateBackend;
 import org.apache.flink.runtime.state.StatePartitionStreamProvider;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.TaskStateManager;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.runtime.util.OperatorSubtaskDescriptionText;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
@@ -105,8 +106,6 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     private final MailboxExecutor mailboxExecutor;
 
-    private final Consumer<Integer> updateOngoingStateReq;
-
     public StreamTaskStateInitializerImpl(Environment environment, StateBackend stateBackend) {
 
         this(
@@ -115,8 +114,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                 TtlTimeProvider.DEFAULT,
                 InternalTimeServiceManagerImpl::create,
                 StreamTaskCancellationContext.alwaysRunning(),
-                null,
-                (val) -> {});
+                null);
     }
 
     @VisibleForTesting
@@ -126,8 +124,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             TtlTimeProvider ttlTimeProvider,
             InternalTimeServiceManager.Provider timeServiceManagerProvider,
             StreamTaskCancellationContext cancellationContext,
-            MailboxExecutor mailboxExecutor,
-            Consumer<Integer> updateOngoingStateReq) {
+            MailboxExecutor mailboxExecutor) {
 
         this.environment = environment;
         this.taskStateManager = Preconditions.checkNotNull(environment.getTaskStateManager());
@@ -136,7 +133,6 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         this.timeServiceManagerProvider = Preconditions.checkNotNull(timeServiceManagerProvider);
         this.cancellationContext = cancellationContext;
         this.mailboxExecutor = mailboxExecutor;
-        this.updateOngoingStateReq = updateOngoingStateReq;
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -176,6 +172,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         try {
 
             // -------------- Keyed State Backend --------------
+            BatchingComponent batchingComponent = new BatchingComponent<>(mailboxExecutor);
             keyedStatedBackend =
                     keyedStatedBackend(
                             keySerializer,
@@ -183,7 +180,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                             prioritizedOperatorSubtaskStates,
                             streamTaskCloseableRegistry,
                             metricGroup,
-                            managedMemoryFraction);
+                            managedMemoryFraction,
+                            batchingComponent);
 
             // -------------- Operator State Backend --------------
             operatorStateBackend =
@@ -242,7 +240,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                     keyedStatedBackend,
                     timeServiceManager,
                     rawOperatorStateInputs,
-                    rawKeyedStateInputs);
+                    rawKeyedStateInputs,
+                    batchingComponent);
         } catch (Exception ex) {
 
             // cleanup if something went wrong before results got published.
@@ -315,7 +314,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             PrioritizedOperatorSubtaskState prioritizedOperatorSubtaskStates,
             CloseableRegistry backendCloseableRegistry,
             MetricGroup metricGroup,
-            double managedMemoryFraction)
+            double managedMemoryFraction,
+            BatchingComponent<?, K> batchingComponent)
             throws Exception {
 
         if (keySerializer == null) {
@@ -362,8 +362,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                                         stateHandles,
                                                         cancelStreamRegistryForRestore,
                                                         managedMemoryFraction,
-                                                        deferStateCallbackToMailbox(mailboxExecutor),
-                                                        updateOngoingStateReq),
+                                                        batchingComponent),
                                 backendCloseableRegistry,
                                 logDescription);
 
@@ -665,6 +664,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
         private final OperatorStateBackend operatorStateBackend;
         private final CheckpointableKeyedStateBackend<?> keyedStateBackend;
+
+        private final @Nullable BatchingComponent<?, ?> batchingComponent;
         private final InternalTimeServiceManager<?> internalTimeServiceManager;
 
         private final CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs;
@@ -676,7 +677,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                 CheckpointableKeyedStateBackend<?> keyedStateBackend,
                 InternalTimeServiceManager<?> internalTimeServiceManager,
                 CloseableIterable<StatePartitionStreamProvider> rawOperatorStateInputs,
-                CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs) {
+                CloseableIterable<KeyGroupStatePartitionStreamProvider> rawKeyedStateInputs,
+                BatchingComponent<?, ?> batchingComponent) {
 
             this.restoredCheckpointId = restoredCheckpointId;
             this.operatorStateBackend = operatorStateBackend;
@@ -684,6 +686,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             this.internalTimeServiceManager = internalTimeServiceManager;
             this.rawOperatorStateInputs = rawOperatorStateInputs;
             this.rawKeyedStateInputs = rawKeyedStateInputs;
+            this.batchingComponent = batchingComponent;
         }
 
         @Override
@@ -696,6 +699,11 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         @Override
         public CheckpointableKeyedStateBackend<?> keyedStateBackend() {
             return keyedStateBackend;
+        }
+
+        @Override
+        public  @Nullable BatchingComponent<?, ?> getBatchingComponent() {
+            return batchingComponent;
         }
 
         @Override

@@ -46,6 +46,7 @@ import org.apache.flink.runtime.state.LocalRecoveryConfig;
 import org.apache.flink.runtime.state.PriorityQueueSetFactory;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSnapshotRestoreWrapper;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.runtime.state.heap.InternalKeyContextImpl;
@@ -103,9 +104,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private final int ioParallelism;
 
-    private final Consumer<RunnableWithException> registerCallBackFunc;
-
-    private Consumer<Integer> updateOngoingStateReq;
+    private final BatchingComponent<?, K> batchingComponent;
 
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
@@ -130,7 +129,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             StreamCompressionDecorator keyGroupCompressionDecorator,
             CloseableRegistry cancelStreamRegistry,
-            Consumer<RunnableWithException> registerCallBackFunc) {
+            BatchingComponent<?, K> batchingComponent) {
         super(
                 operatorIdentifier,
                 userCodeClassLoader,
@@ -154,11 +153,11 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         this.workingDir = workingDir;
         this.enableCacheLayer = enableCacheLayer;
         this.ioParallelism = ioParallelism;
-        this.registerCallBackFunc = registerCallBackFunc;
+        this.batchingComponent = batchingComponent;
     }
 
     @Override
-    public RemoteRocksDBKeyedStateBackend<K> build() throws BackendBuildingException {
+    public RemoteRocksDBKeyedStateBackend<?, K> build() throws BackendBuildingException {
         RocksDBWriteBatchWrapper writeBatchWrapper = null;
         ColumnFamilyHandle defaultColumnFamilyHandle = null;
         RocksDBNativeMetricMonitor nativeMetricMonitor = null;
@@ -310,8 +309,7 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 ttlCompactFiltersManager,
                 keyContext,
                 writeBatchSize,
-                registerCallBackFunc,
-                updateOngoingStateReq);
+                batchingComponent);
     }
 
     @Override
@@ -353,12 +351,6 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
             super.prepareDirectories();
         }
         //TODO
-    }
-
-    public RemoteRocksDBKeyedStateBackendBuilder<K> setUpdateOngoingStateReqFunc(
-            Consumer<Integer> updateOngoingStateReq) {
-        this.updateOngoingStateReq = updateOngoingStateReq;
-        return this;
     }
 
     private RemoteRocksDBIncrementalSnapshotStrategy<K> initializeSavepointAndCheckpointStrategies(

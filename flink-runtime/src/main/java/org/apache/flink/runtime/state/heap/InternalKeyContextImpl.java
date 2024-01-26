@@ -20,6 +20,7 @@ package org.apache.flink.runtime.state.heap;
 
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeOffsets;
+import org.apache.flink.runtime.state.async.RecordContext;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -45,6 +46,8 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     private Collection<K> currentKeys;
 
     private boolean inCallBackProcess;
+
+    private RecordContext recordContext;
 
     public InternalKeyContextImpl(
             @Nonnull KeyGroupRange keyGroupRange, @Nonnegative int numberOfKeyGroups) {
@@ -106,5 +109,13 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     @Override
     public void setCurrentKeys(Collection<K> keys) {
         currentKeys = keys;
+    }
+
+    public <R> void setCurrentRecordContext(RecordContext<K, R> recordContext) {
+        this.recordContext = recordContext;
+    }
+
+    public <R> RecordContext<K, R> getCurrentRecordContext(){
+        return recordContext;
     }
 }
