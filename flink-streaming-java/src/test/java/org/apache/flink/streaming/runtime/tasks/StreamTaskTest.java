@@ -99,6 +99,7 @@ import org.apache.flink.runtime.state.TaskLocalStateStoreImpl;
 import org.apache.flink.runtime.state.TaskStateManager;
 import org.apache.flink.runtime.state.TaskStateManagerImpl;
 import org.apache.flink.runtime.state.TestTaskStateManager;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.changelog.inmemory.InMemoryStateChangelogStorage;
 import org.apache.flink.runtime.state.memory.MemoryStateBackend;
 import org.apache.flink.runtime.state.ttl.mock.MockStateBackend;
@@ -2336,6 +2337,11 @@ public class StreamTaskTest {
                     @Override
                     public CheckpointableKeyedStateBackend<?> keyedStateBackend() {
                         return controller.keyedStateBackend();
+                    }
+
+                    @Override
+                    public BatchingComponent<?, ?> getBatchingComponent() {
+                        return controller.getBatchingComponent();
                     }
 
                     @Override

@@ -153,6 +153,7 @@ public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBacke
         this.createdAsyncKVStates = new HashMap<>();
         this.stateExecutorService = new StateExecutorService<>(ioParallelism);
         this.batchingComponent = batchingComponent;
+        batchingComponent.setStateExecutor(stateExecutorService);
         LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
                 remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
     }

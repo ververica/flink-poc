@@ -205,8 +205,7 @@ public class StateInitializationContextImplTest {
                             }
                         },
                         StreamTaskCancellationContext.alwaysRunning(),
-                        null,
-                        (val) ->{});
+                        null);
 
         AbstractStreamOperator<?> mockOperator = mock(AbstractStreamOperator.class);
         when(mockOperator.getOperatorID()).thenReturn(operatorID);

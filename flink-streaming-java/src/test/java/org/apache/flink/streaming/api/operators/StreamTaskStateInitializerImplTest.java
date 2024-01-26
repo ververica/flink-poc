@@ -328,8 +328,7 @@ public class StreamTaskStateInitializerImplTest {
                         }
                     },
                     StreamTaskCancellationContext.alwaysRunning(),
-                    null,
-                    (val)->{});
+                    null);
         }
     }
 }

@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Optional;
 
-import static org.apache.flink.api.common.state.StateDescriptor.Type.VALUE;
+import static org.apache.flink.api.common.state.StateDescriptorBase.Type.VALUE;
 import static org.apache.flink.state.changelog.StateChangeOperation.MERGE_NS;
 
 /** {@link KvStateChangeLoggerImpl} test. */
