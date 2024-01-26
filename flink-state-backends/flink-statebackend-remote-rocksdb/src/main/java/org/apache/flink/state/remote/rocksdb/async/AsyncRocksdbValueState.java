@@ -22,7 +22,7 @@ import java.io.IOException;
 public class AsyncRocksdbValueState<R, K, N, V>
         extends AbstractAsyncRocksdbState<R, K, N, V> implements AsyncValueState<V> {
 
-    private RemoteRocksdbValueState<K, N, V> syncValueState;
+    private final RemoteRocksdbValueState<K, N, V> syncValueState;
 
     AsyncRocksdbValueState(
             RemoteRocksDBKeyedStateBackend<R, K> backend,
@@ -32,7 +32,7 @@ public class AsyncRocksdbValueState<R, K, N, V>
             TypeSerializer<N> namespaceSerializer,
             TypeSerializer<V> valueSerializer,
             V defaultValue) {
-        super(backend.getBatchingComponent(), keyContext);
+        super(backend, keyContext, keySerializer, namespaceSerializer, valueSerializer);
         this.syncValueState = new RemoteRocksdbValueState<>(backend, columnFamily, keySerializer,
                 namespaceSerializer, valueSerializer, defaultValue);
         stateExecutor.registerState(syncValueState);

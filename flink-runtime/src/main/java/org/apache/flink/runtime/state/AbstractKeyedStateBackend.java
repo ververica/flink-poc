@@ -83,6 +83,10 @@ public abstract class AbstractKeyedStateBackend<K>
     @SuppressWarnings("rawtypes")
     private InternalKvState lastState;
 
+    private String lastAsyncStateName;
+
+    private InternalAsyncState lastAsyncState;
+
     /** The number of key-groups aka max parallelism. */
     protected final int numberOfKeyGroups;
 
@@ -482,6 +486,37 @@ public abstract class AbstractKeyedStateBackend<K>
         lastName = stateDescriptor.getName();
         lastState = kvState;
         kvState.setCurrentNamespace(namespace);
+
+        return state;
+    }
+
+    @Override
+    public <N, S extends AsyncState> S getPartitionedState(
+            N namespace,
+            TypeSerializer<N> namespaceSerializer,
+            AsyncStateDescriptor<S, ?> stateDescriptor)
+            throws Exception {
+        checkNotNull(namespace, "Namespace");
+
+        if (lastAsyncStateName != null && lastAsyncStateName.equals(stateDescriptor.getName())) {
+            lastAsyncState.setCurrentNamespace(namespace);
+            return (S) lastAsyncState;
+        }
+
+        InternalAsyncState<K, ?, ?> previous = asyncStatesByName.get(stateDescriptor.getName());
+        if (previous != null) {
+            lastAsyncState = previous;
+            lastAsyncState.setCurrentNamespace(namespace);
+            lastAsyncStateName = stateDescriptor.getName();
+            return (S) previous;
+        }
+
+        final S state = getOrCreateKeyedState(namespaceSerializer, stateDescriptor);
+        final InternalAsyncState<K, N, ?> asyncKvState = (InternalAsyncState<K, N, ?>) state;
+
+        lastAsyncStateName = stateDescriptor.getName();
+        lastAsyncState = asyncKvState;
+        lastAsyncState.setCurrentNamespace(namespace);
 
         return state;
     }

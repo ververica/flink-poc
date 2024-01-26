@@ -141,9 +141,11 @@ public interface KeyedStateBackend<K>
      * @throws Exception Exceptions may occur during initialization of the state and should be
      *     forwarded.
      */
-    <N, S extends AsyncState, T> S getOrCreateKeyedState(
+    default <N, S extends AsyncState, T> S getOrCreateKeyedState(
             TypeSerializer<N> namespaceSerializer, AsyncStateDescriptor<S, T> stateDescriptor)
-            throws Exception;
+            throws Exception {
+        throw new UnsupportedOperationException("Unsupported async state");
+    }
 
     /**
      * Creates or retrieves a partitioned state backed by this state backend.

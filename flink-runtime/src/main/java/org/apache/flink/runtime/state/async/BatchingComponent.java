@@ -20,6 +20,10 @@ public class BatchingComponent<R, K> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BatchingComponent.class);
 
+    public static final int BATCH_SIZE = 2000;
+
+    public static final int MAX_IN_FLIGHT_RECORD_NUM = 100000;
+
     private final Map<K, R> noConflictInFlightRecords = new ConcurrentHashMap<>();
 
     private final RecordBatchingContainer<K> batchingStateRequests = new RecordBatchingContainer<>();
@@ -49,7 +53,7 @@ public class BatchingComponent<R, K> {
             batchingStateRequests.offer(request);
         }
 
-        if (inFlightRecordNum.get() > 1000) {
+        if (inFlightRecordNum.get() > BATCH_SIZE) {
             fireOneBatch();
         }
     }
@@ -63,7 +67,7 @@ public class BatchingComponent<R, K> {
 
     private void requestStateAccessTokenUntilSuccess(RecordContext<K, R> recordContext) throws IOException {
         try {
-            while (inFlightRecordNum.get() > 6000) {
+            while (inFlightRecordNum.get() > MAX_IN_FLIGHT_RECORD_NUM) {
                 mailboxExecutor.yield();
             }
 
@@ -116,6 +120,10 @@ public class BatchingComponent<R, K> {
 
     private void registerCallBackIntoMailBox(RunnableWithException callBack) {
         mailboxExecutor.execute(callBack, "AsyncStateCallBack");
+    }
+
+    public void setStateExecutor(StateExecutor<K> stateExecutor) {
+        this.stateExecutor = stateExecutor;
     }
 
     static class RecordBatchingContainer<K> implements Iterable<StateRequest<?, K, ?, ?>> {

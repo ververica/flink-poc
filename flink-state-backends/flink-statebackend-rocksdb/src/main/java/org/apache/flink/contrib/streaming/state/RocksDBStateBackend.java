@@ -39,6 +39,7 @@ import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
 import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.filesystem.FsStateBackend;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.TernaryBoolean;
@@ -357,8 +358,7 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
             @Nonnull Collection<KeyedStateHandle> stateHandles,
             CloseableRegistry cancelStreamRegistry,
             double managedMemoryFraction,
-            Consumer<RunnableWithException> registerCallBackFunc,
-            Consumer<Integer> updateOngoingStateReq)
+            BatchingComponent<?, K> batchingComponent)
             throws IOException {
         return rocksDBStateBackend.createKeyedStateBackend(
                 env,
@@ -373,8 +373,7 @@ public class RocksDBStateBackend extends AbstractManagedMemoryStateBackend
                 stateHandles,
                 cancelStreamRegistry,
                 managedMemoryFraction,
-                registerCallBackFunc,
-                updateOngoingStateReq);
+                batchingComponent);
     }
 
     @Override
