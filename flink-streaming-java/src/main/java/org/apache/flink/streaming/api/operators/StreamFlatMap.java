@@ -19,6 +19,7 @@ package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 /** A {@link StreamOperator} for executing {@link FlatMapFunction FlatMapFunctions}. */
@@ -43,9 +44,9 @@ public class StreamFlatMap<IN, OUT> extends AbstractUdfStreamOperator<OUT, FlatM
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
-        preProcessElement(element);
+        RecordContext<?, IN> recordContext = preProcessElement(element.getValue());
         collector.setTimestamp(element);
         userFunction.flatMap(element.getValue(), collector);
-        postProcessElement();
+        postProcessElement(recordContext);
     }
 }

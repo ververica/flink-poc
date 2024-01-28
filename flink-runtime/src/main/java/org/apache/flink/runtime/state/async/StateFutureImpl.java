@@ -32,16 +32,17 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
         this.currentRecord = currentRecord;
         this.keyContext = internalKeyContext;
         this.registerMailBoxCallBackFunc = registerMailBoxCallBackFunc;
+        currentRecord.retain();
     }
 
     @Override
     public void complete(V value) {
         future.complete(value);
+        currentRecord.release();
     }
 
     @Override
     public <C> StateFuture<C> then(Function<? super V, ? extends C> action) {
-        currentRecord.retainRef();
         StateFutureImpl<R, K, C> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
             registerMailBoxCallBackFunc.accept(() -> {
@@ -49,7 +50,6 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
                 keyContext.setCurrentRecordContext(currentRecord);
                 C result = action.apply(value);
                 stateFuture.complete(result);
-                currentRecord.releaseRef();
             });
         });
         return stateFuture;
@@ -57,7 +57,6 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
 
     @Override
     public StateFuture<Void> then(Consumer<? super V> action) {
-        currentRecord.retainRef();
         StateFutureImpl<R, K, Void> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
             registerMailBoxCallBackFunc.accept(() -> {
@@ -65,7 +64,6 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
                 keyContext.setCurrentRecordContext(currentRecord);
                 action.accept(value);
                 stateFuture.complete(null);
-                currentRecord.releaseRef();
             });
         });
         return stateFuture;

@@ -525,15 +525,16 @@ public abstract class AbstractStreamOperator<OUT>
         return stateHandler.getCurrentKeys();
     }
 
-    public <E> void preProcessElement(E element) {
+    public <E> RecordContext<?, E> preProcessElement(E element) {
         RecordContext<?, E> recordContext = new RecordContext<>(element, getCurrentKey(),
                 stateHandler.getBatchingComponent());
         stateHandler.setCurrentRecordContext(recordContext);
-        recordContext.retainRef();
+        recordContext.retain();
+        return recordContext;
     }
 
-    public <E> void postProcessElement() {
-        stateHandler.getCurrentRecordContext().releaseRef();
+    public <E> void postProcessElement(RecordContext<?, E> recordContext) {
+        recordContext.release();
     }
 
     public void clearCurrentKeysCache() {
