@@ -8,6 +8,9 @@ import org.apache.flink.state.remote.rocksdb.internal.RemoteState;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.concurrent.FutureUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,17 +21,23 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class StateExecutorService<K> implements StateExecutor<K> {
+
+    private static final Logger LOG = LoggerFactory.getLogger(StateExecutorService.class);
     
-    private final ExecutorService executorService;
+    private final ExecutorService stateIOExecutors;
+
+    private final Executor coordinatorExecurtor;
 
     private final Set<RemoteState> registeredStates = new HashSet<>();
     
     public StateExecutorService(int ioParallelism) {
-        this.executorService = Executors.newFixedThreadPool(ioParallelism + 1);
+        this.stateIOExecutors = Executors.newFixedThreadPool(ioParallelism);
+        this.coordinatorExecurtor = Executors.newSingleThreadScheduledExecutor();
     }
 
     public synchronized <S extends RemoteState> void registerState(S state) {
@@ -38,6 +47,7 @@ public class StateExecutorService<K> implements StateExecutor<K> {
     @Override
     public CompletableFuture<Boolean> executeBatchRequests(Iterable<StateRequest<?, K, ?, ?>> stateRequests) {
         Map<RemoteState, Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>>> requestClassifier = new HashMap<>();
+        int stateRequestCount = 0;
         for (StateRequest<?, K, ?, ?> request : stateRequests) {
             Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>> sameStateRequests =
                     requestClassifier.computeIfAbsent((RemoteState) request.getState(), (key) -> new HashMap<>());
@@ -45,10 +55,13 @@ public class StateExecutorService<K> implements StateExecutor<K> {
             List<StateRequest<?, K, ?, ?>> sameTypeRequests =
                     sameStateRequests.computeIfAbsent(request.getQuestType(), (key) -> new ArrayList<>());
             sameTypeRequests.add(request);
+            stateRequestCount++;
         }
 
+        LOG.debug("Submit state batch requests: count {}", stateRequestCount);
         CompletableFuture<Boolean> future = new CompletableFuture<>();
         CompletableFuture.runAsync(() -> {
+            long startTime = System.currentTimeMillis();
             for (Map.Entry<RemoteState, Map<StateRequest.RequestType, List<StateRequest<?, K, ?, ?>>>>
                     entry : requestClassifier.entrySet()) {
                 if (!registeredStates.contains(entry.getKey())) {
@@ -61,7 +74,8 @@ public class StateExecutorService<K> implements StateExecutor<K> {
                 }
             }
             future.complete(true);
-        }, executorService);
+            LOG.debug("Finish batch request: consumeTime {} ms.", System.currentTimeMillis() - startTime);
+        }, coordinatorExecurtor);
         
         return future;
     }
@@ -97,7 +111,7 @@ public class StateExecutorService<K> implements StateExecutor<K> {
                 } catch (IOException e) {
                     throw new StateUncheckedIOException(e);
                 }
-            }, executorService));
+            }, stateIOExecutors));
         }
     }
 
@@ -113,6 +127,6 @@ public class StateExecutorService<K> implements StateExecutor<K> {
                     throw new StateUncheckedIOException(e);
                 }
             }
-        }, executorService));
+        }, stateIOExecutors));
     }
 }

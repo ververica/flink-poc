@@ -2,6 +2,7 @@ package org.apache.flink.runtime.state.async;
 
 import org.apache.flink.api.common.operators.MailboxExecutor;
 
+import org.apache.flink.api.common.state.async.StateUncheckedIOException;
 import org.apache.flink.runtime.state.heap.InternalKeyContext;
 
 import org.apache.flink.util.function.RunnableWithException;
@@ -12,17 +13,21 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BatchingComponent<R, K> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BatchingComponent.class);
 
-    public static final int BATCH_SIZE = 2000;
+    public static final int BATCH_SIZE = 1000;
 
-    public static final int MAX_IN_FLIGHT_RECORD_NUM = 100000;
+    public static final int MAX_IN_FLIGHT_RECORD_NUM = 6000;
 
     private final Map<K, R> noConflictInFlightRecords = new ConcurrentHashMap<>();
 
@@ -40,6 +45,7 @@ public class BatchingComponent<R, K> {
     }
 
     public <F> void processStateRequest(StateRequest<?, K, ?, F> request, RecordContext<K, R> recordContext) throws IOException {
+        LOG.trace("start process request {}, {}", request.getQuestType(), request.getKey());
         if (!recordContext.heldStateAccessToken()) {
             requestStateAccessTokenUntilSuccess(recordContext);
         }
@@ -53,7 +59,7 @@ public class BatchingComponent<R, K> {
             batchingStateRequests.offer(request);
         }
 
-        if (inFlightRecordNum.get() > BATCH_SIZE) {
+        if (batchingStateRequests.size() > BATCH_SIZE) {
             fireOneBatch();
         }
     }
@@ -66,9 +72,13 @@ public class BatchingComponent<R, K> {
     }
 
     private void requestStateAccessTokenUntilSuccess(RecordContext<K, R> recordContext) throws IOException {
+        LOG.trace("Request StateAccess Token Until Success {} {}", recordContext.getRecord(), inFlightRecordNum.get());
         try {
             while (inFlightRecordNum.get() > MAX_IN_FLIGHT_RECORD_NUM) {
-                mailboxExecutor.yield();
+                if (!mailboxExecutor.tryYield()) {
+                    fireOneBatch();
+                    Thread.sleep(50);
+                }
             }
 
             recordContext.setHeldStateAccessToken();
@@ -79,20 +89,32 @@ public class BatchingComponent<R, K> {
     }
 
     public void releaseStateAccessToken(R record, K key) {
-        R existRecord = noConflictInFlightRecords.get(key);
+
+        R existRecord = noConflictInFlightRecords.remove(key);
         assert existRecord == record;
         LOG.trace("remove record {} key {}", record, key);
         inFlightRecordNum.decrementAndGet();
     }
 
-    private void fireOneBatch() throws IOException {
-       stateExecutor.executeBatchRequests(batchingStateRequests);
-       resetBatchingStateRequestQueue();
+    private void fireOneBatch() {
+        try {
+            tryPollPendingRequestsToBatchingQueue();
+            LOG.trace("fire one batch: inFightRecordNum {}, batchingRequests num {}, pendingRequest num {}",
+                    inFlightRecordNum.get(), batchingStateRequests.size(), pendingStateRequests.size());
+            if (batchingStateRequests.isEmpty()) {
+                return;
+            }
+
+            stateExecutor.executeBatchRequests(batchingStateRequests);
+            batchingStateRequests.clear();
+            tryPollPendingRequestsToBatchingQueue();
+        } catch (Exception e) {
+            throw new StateUncheckedIOException(new IOException(e));
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private void resetBatchingStateRequestQueue() {
-        batchingStateRequests.clear();
+    private synchronized void tryPollPendingRequestsToBatchingQueue() {
         Iterator<StateRequest<?, K, ?, ?>> pendingIter = pendingStateRequests.iterator();
         while(pendingIter.hasNext()) {
             StateRequest<?, K, ?, ?> stateRequest = pendingIter.next();
@@ -107,7 +129,10 @@ public class BatchingComponent<R, K> {
 
     public void drainAllInFlightDataBeforeStateSnapshot() throws InterruptedException {
         while (inFlightRecordNum.get() > 0) {
-            mailboxExecutor.yield();
+            if (!mailboxExecutor.tryYield()) {
+                fireOneBatch();
+                Thread.sleep(50);
+            }
         }
     }
 
@@ -119,6 +144,7 @@ public class BatchingComponent<R, K> {
     }
 
     private void registerCallBackIntoMailBox(RunnableWithException callBack) {
+        LOG.trace("Register callback to MailBox");
         mailboxExecutor.execute(callBack, "AsyncStateCallBack");
     }
 
@@ -138,6 +164,9 @@ public class BatchingComponent<R, K> {
         public void offer(StateRequest<?, K, ?, ?> request) {
             batchingRequests.offer(request);
             size++;
+            synchronized (this) {
+                notify();
+            }
         }
 
         public void add(StateRequest<?, K, ?, ?> request) {

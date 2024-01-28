@@ -63,7 +63,7 @@ public class WordCountTest {
         FileSystem.initialize(config, null);
         config.set(CHECKPOINTS_DIRECTORY, "file:///tmp/checkpoint");
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
-       // env.enableCheckpointing(500);
+        env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);

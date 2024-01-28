@@ -1,22 +1,20 @@
 package org.apache.flink.runtime.state.async;
 
-public class RecordContext<K, R> {
+public class RecordContext<K, R> extends ReferenceCounted {
 
     private final R record;
 
     private final K key;
-
-    private int refCount;
 
     private boolean heldStateAccessToken;
 
     private final BatchingComponent<R, K> batchingComponentHandle;
 
     public RecordContext(R record, K key, BatchingComponent<R, K> batchingComponentHandle) {
+        super(0);
         this.record = record;
         this.key = key;
         this.heldStateAccessToken = false;
-        this.refCount = 0;
         this.batchingComponentHandle = batchingComponentHandle;
     }
 
@@ -32,13 +30,8 @@ public class RecordContext<K, R> {
         heldStateAccessToken = true;
     }
 
-    public void retainRef() {
-        ++refCount;
-    }
-
-    public void releaseRef() {
-        if (--refCount == 0) {
-            batchingComponentHandle.releaseStateAccessToken(record, key);
-        }
+    @Override
+    protected void referenceCountReachedZero() {
+        batchingComponentHandle.releaseStateAccessToken(record, key);
     }
 }
