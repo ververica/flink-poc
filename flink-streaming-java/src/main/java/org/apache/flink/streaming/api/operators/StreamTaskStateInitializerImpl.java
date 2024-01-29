@@ -147,8 +147,9 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
             @Nonnull CloseableRegistry streamTaskCloseableRegistry,
             @Nonnull MetricGroup metricGroup,
             double managedMemoryFraction,
-            boolean isUsingCustomRawKeyedState)
-            throws Exception {
+            boolean isUsingCustomRawKeyedState,
+            int batchComponentBatchSize,
+            int batchComponentMaxInFlightRecordNum) throws Exception {
 
         TaskInfo taskInfo = environment.getTaskInfo();
         OperatorSubtaskDescriptionText operatorSubtaskDescription =
@@ -172,7 +173,10 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         try {
 
             // -------------- Keyed State Backend --------------
-            BatchingComponent batchingComponent = new BatchingComponent<>(mailboxExecutor);
+            BatchingComponent stateBatchingComponent = new BatchingComponent<>(
+                    mailboxExecutor,
+                    batchComponentBatchSize,
+                    batchComponentMaxInFlightRecordNum);
             keyedStatedBackend =
                     keyedStatedBackend(
                             keySerializer,
@@ -181,7 +185,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                             streamTaskCloseableRegistry,
                             metricGroup,
                             managedMemoryFraction,
-                            batchingComponent);
+                            stateBatchingComponent);
 
             // -------------- Operator State Backend --------------
             operatorStateBackend =
@@ -241,7 +245,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                     timeServiceManager,
                     rawOperatorStateInputs,
                     rawKeyedStateInputs,
-                    batchingComponent);
+                    stateBatchingComponent);
         } catch (Exception ex) {
 
             // cleanup if something went wrong before results got published.

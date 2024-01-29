@@ -1017,6 +1017,22 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         return configuration.get(ExecutionOptions.BUNDLE_OPERATOR_BATCH_SIZE);
     }
 
+    public void setBatchingComponentBatchSize(int batchSize) {
+        configuration.set(ExecutionOptions.BATCHING_COMPONENT_BATCH_SIZE, batchSize);
+    }
+
+    public int getBatchingComponentBatchSize() {
+        return configuration.get(ExecutionOptions.BATCHING_COMPONENT_BATCH_SIZE);
+    }
+
+    public void setBatchingComponentMaxInFlightRecordNum(int maxNum) {
+        configuration.set(ExecutionOptions.BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM, maxNum);
+    }
+
+    public int getBatchingComponentMaxInFlightRecordNum() {
+        return configuration.get(ExecutionOptions.BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ExecutionConfig) {
@@ -1242,6 +1258,12 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         configuration
                 .getOptional(ExecutionOptions.BUNDLE_OPERATOR_BATCH_SIZE)
                 .ifPresent(this::setBundleOperatorBatchSize);
+        configuration
+                .getOptional(ExecutionOptions.BATCHING_COMPONENT_BATCH_SIZE)
+                .ifPresent(this::setBatchingComponentBatchSize);
+        configuration
+                .getOptional(ExecutionOptions.BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM)
+                .ifPresent(this::setBatchingComponentMaxInFlightRecordNum);
     }
 
     /**

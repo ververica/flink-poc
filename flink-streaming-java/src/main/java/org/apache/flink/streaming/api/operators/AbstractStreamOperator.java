@@ -46,6 +46,7 @@ import org.apache.flink.runtime.state.StateInitializationContext;
 import org.apache.flink.runtime.state.StateSnapshotContext;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.StreamOperatorStateHandler.CheckpointedStreamOperator;
@@ -253,7 +254,6 @@ public abstract class AbstractStreamOperator<OUT>
         final StreamTask<?, ?> containingTask = Preconditions.checkNotNull(getContainingTask());
         final CloseableRegistry streamTaskCloseableRegistry =
                 Preconditions.checkNotNull(containingTask.getCancelables());
-
         final StreamOperatorStateContext context =
                 streamTaskStateManager.streamOperatorStateContext(
                         getOperatorID(),
@@ -267,7 +267,10 @@ public abstract class AbstractStreamOperator<OUT>
                                 ManagedMemoryUseCase.STATE_BACKEND,
                                 runtimeContext.getTaskManagerRuntimeInfo().getConfiguration(),
                                 runtimeContext.getUserCodeClassLoader()),
-                        isUsingCustomRawKeyedState());
+                        isUsingCustomRawKeyedState(),
+                        runtimeContext.getExecutionConfig().getBatchingComponentBatchSize(),
+                        runtimeContext.getExecutionConfig()
+                                .getBatchingComponentMaxInFlightRecordNum());
 
         stateHandler =
                 new StreamOperatorStateHandler(
@@ -431,6 +434,7 @@ public abstract class AbstractStreamOperator<OUT>
 
     @VisibleForTesting
     public OperatorStateBackend getOperatorStateBackend() {
+        runtimeContext.getExecutionConfig().getBundleOperatorBatchSize();
         return stateHandler.getOperatorStateBackend();
     }
 

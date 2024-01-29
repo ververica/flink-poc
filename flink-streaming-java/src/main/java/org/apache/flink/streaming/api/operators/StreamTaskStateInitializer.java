@@ -22,6 +22,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.fs.CloseableRegistry;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 
 import javax.annotation.Nonnull;
@@ -63,6 +64,24 @@ public interface StreamTaskStateInitializer {
             @Nonnull CloseableRegistry streamTaskCloseableRegistry,
             @Nonnull MetricGroup metricGroup,
             double managedMemoryFraction,
-            boolean isUsingCustomRawKeyedState)
+            boolean isUsingCustomRawKeyedState,
+            int batchComponentBatchSize,
+            int batchComponentMaxInFlightRecordNum)
             throws Exception;
+
+    default StreamOperatorStateContext streamOperatorStateContext(
+            @Nonnull OperatorID operatorID,
+            @Nonnull String operatorClassName,
+            @Nonnull ProcessingTimeService processingTimeService,
+            @Nonnull KeyContext keyContext,
+            @Nullable TypeSerializer<?> keySerializer,
+            @Nonnull CloseableRegistry streamTaskCloseableRegistry,
+            @Nonnull MetricGroup metricGroup,
+            double managedMemoryFraction,
+            boolean isUsingCustomRawKeyedState)
+            throws Exception {
+        return streamOperatorStateContext(operatorID, operatorClassName, processingTimeService,
+                keyContext, keySerializer, streamTaskCloseableRegistry, metricGroup,
+                managedMemoryFraction, isUsingCustomRawKeyedState, -1, -1);
+    }
 }

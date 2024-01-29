@@ -2305,7 +2305,9 @@ public class StreamTaskTest {
                     closeableRegistry,
                     metricGroup,
                     fraction,
-                    isUsingCustomRawKeyedState) -> {
+                    isUsingCustomRawKeyedState,
+                    ignoreBatchSize,
+                    ignoreMaxInFlightNum) -> {
                 final StreamOperatorStateContext controller =
                         streamTaskStateManager.streamOperatorStateContext(
                                 operatorID,

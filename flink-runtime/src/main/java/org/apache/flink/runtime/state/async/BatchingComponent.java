@@ -13,21 +13,21 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class BatchingComponent<R, K> {
 
     private static final Logger LOG = LoggerFactory.getLogger(BatchingComponent.class);
 
-    public static final int BATCH_SIZE = 1000;
+    public static final int DEFAULT_BATCH_SIZE = 1000;
 
-    public static final int MAX_IN_FLIGHT_RECORD_NUM = 6000;
+    public static final int DEFAULT_MAX_IN_FLIGHT_RECORD_NUM = 6000;
+
+    private final int batchSize;
+
+    private final int maxInFlightRecordNum;
 
     private final Map<K, R> noConflictInFlightRecords = new ConcurrentHashMap<>();
 
@@ -41,7 +41,14 @@ public class BatchingComponent<R, K> {
     private final MailboxExecutor mailboxExecutor;
 
     public BatchingComponent(MailboxExecutor mailboxExecutor) {
+        this(mailboxExecutor, DEFAULT_BATCH_SIZE, DEFAULT_MAX_IN_FLIGHT_RECORD_NUM);
+    }
+
+    public BatchingComponent(MailboxExecutor mailboxExecutor, int batchSize, int maxInFlightRecords) {
         this.mailboxExecutor = mailboxExecutor;
+        this.batchSize = batchSize;
+        this.maxInFlightRecordNum = maxInFlightRecords;
+        LOG.info("Create BatchingComponent: batchSize {}, maxInFlightRecordsNum {}", batchSize, maxInFlightRecords);
     }
 
     public <F> void processStateRequest(StateRequest<?, K, ?, F> request, RecordContext<K, R> recordContext) throws IOException {
@@ -59,7 +66,7 @@ public class BatchingComponent<R, K> {
             batchingStateRequests.offer(request);
         }
 
-        if (batchingStateRequests.size() > BATCH_SIZE) {
+        if (batchingStateRequests.size() > batchSize) {
             fireOneBatch();
         }
     }
@@ -74,7 +81,7 @@ public class BatchingComponent<R, K> {
     private void requestStateAccessTokenUntilSuccess(RecordContext<K, R> recordContext) throws IOException {
         LOG.trace("Request StateAccess Token Until Success {} {}", recordContext.getRecord(), inFlightRecordNum.get());
         try {
-            while (inFlightRecordNum.get() > MAX_IN_FLIGHT_RECORD_NUM) {
+            while (inFlightRecordNum.get() > maxInFlightRecordNum) {
                 if (!mailboxExecutor.tryYield()) {
                     fireOneBatch();
                     Thread.sleep(50);
