@@ -179,4 +179,20 @@ public class ExecutionOptions {
                     .intType()
                     .defaultValue(1000)
                     .withDescription("Batch size for bundle operator");
+
+    @Documentation.ExcludeFromDocumentation(
+            "This is an expert option, that we do not want to expose in the documentation")
+    public static final ConfigOption<Integer> BATCHING_COMPONENT_BATCH_SIZE =
+            ConfigOptions.key("execution.batch-component.batch-size")
+                    .intType()
+                    .defaultValue(1000)
+                    .withDescription("The batch size for state batching component.");
+
+    @Documentation.ExcludeFromDocumentation(
+            "This is an expert option, that we do not want to expose in the documentation")
+    public static final ConfigOption<Integer> BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM =
+            ConfigOptions.key("execution.batch-component.max-in-flight-record-num")
+                    .intType()
+                    .defaultValue(6000)
+                    .withDescription("The max in-fight record num for state batching component.");
 }

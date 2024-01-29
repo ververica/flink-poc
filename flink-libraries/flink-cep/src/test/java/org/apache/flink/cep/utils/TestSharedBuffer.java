@@ -29,6 +29,8 @@ import org.apache.flink.api.common.state.ReducingState;
 import org.apache.flink.api.common.state.ReducingStateDescriptor;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.cep.configuration.SharedBufferCacheConfig;
 import org.apache.flink.cep.nfa.sharedbuffer.SharedBuffer;
@@ -117,6 +119,11 @@ public class TestSharedBuffer<V> extends SharedBuffer<V> {
                     this.value = null;
                 }
             };
+        }
+
+        @Override
+        public <T> AsyncValueState<T> getAsyncState(AsyncValueStateDescriptor<T> stateProperties) {
+            throw new UnsupportedOperationException();
         }
 
         @Override
