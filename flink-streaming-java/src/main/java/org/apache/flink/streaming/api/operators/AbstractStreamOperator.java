@@ -53,6 +53,7 @@ import org.apache.flink.streaming.api.operators.StreamOperatorStateHandler.Check
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.streaming.runtime.tasks.EpochManager;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
@@ -90,13 +91,15 @@ import static org.apache.flink.util.Preconditions.checkState;
 @PublicEvolving
 public abstract class AbstractStreamOperator<OUT>
         implements StreamOperator<OUT>,
-                SetupableStreamOperator<OUT>,
-                CheckpointedStreamOperator,
-                KeyContextHandler,
-                Serializable {
+        SetupableStreamOperator<OUT>,
+        CheckpointedStreamOperator,
+        KeyContextHandler,
+        Serializable {
     private static final long serialVersionUID = 1L;
 
-    /** The logger used by the operator class and its subclasses. */
+    /**
+     * The logger used by the operator class and its subclasses.
+     */
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractStreamOperator.class);
 
     // ----------- configuration properties -------------
@@ -151,6 +154,9 @@ public abstract class AbstractStreamOperator<OUT>
 
     protected transient ProcessingTimeService processingTimeService;
 
+    // ---------------- epoch manager -----------------
+    protected transient EpochManager epochManager;
+
     // ------------------------------------------------------------------------
     //  Life Cycle
     // ------------------------------------------------------------------------
@@ -169,7 +175,7 @@ public abstract class AbstractStreamOperator<OUT>
                         .getMetricGroup()
                         .getOrAddOperator(config.getOperatorID(), config.getOperatorName());
         this.combinedWatermark = IndexedCombinedWatermarkStatus.forInputsCount(2);
-
+        this.epochManager = container.getEpochManager();
         try {
             Configuration taskManagerConfig = environment.getTaskManagerInfo().getConfiguration();
             int historySize = taskManagerConfig.getInteger(MetricOptions.LATENCY_HISTORY_SIZE);
@@ -408,7 +414,7 @@ public abstract class AbstractStreamOperator<OUT>
      * subtask index is returned. Otherwise, the simple class name is returned.
      *
      * @return If runtime context is set, then return task name with subtask index. Otherwise return
-     *     simple class name.
+     * simple class name.
      */
     protected String getOperatorName() {
         if (runtimeContext != null) {
@@ -530,8 +536,14 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     public <E> RecordContext<?, E> preProcessElement(E element) {
-        RecordContext<?, E> recordContext = new RecordContext<>(element, getCurrentKey(),
-                stateHandler.getBatchingComponent());
+        RecordContext<?, E> recordContext = new RecordContext<>(element, getCurrentKey(), epochManager.onRecord(),
+                stateHandler.getBatchingComponent(), recordId -> {
+            try {
+                epochManager.completeOneRecord(recordId);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
         stateHandler.setCurrentRecordContext(recordContext);
         recordContext.retain();
         return recordContext;
@@ -631,10 +643,12 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     public void processWatermark(Watermark mark) throws Exception {
-        if (timeServiceManager != null) {
-            timeServiceManager.advanceWatermark(mark);
-        }
-        output.emitWatermark(mark);
+        epochManager.onNonRecord(() -> {
+            if (timeServiceManager != null) {
+                timeServiceManager.advanceWatermark(mark);
+            }
+            output.emitWatermark(mark);
+        });
     }
 
     private void processWatermark(Watermark mark, int index) throws Exception {
