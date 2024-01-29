@@ -315,6 +315,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @Nullable private final AvailabilityProvider changelogWriterAvailabilityProvider;
 
+    private final EpochManager epochManager;
+
     // ------------------------------------------------------------------------
 
     /**
@@ -504,6 +506,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
             this.bufferDebloatPeriod = taskManagerConf.get(BUFFER_DEBLOAT_PERIOD).toMillis();
             mailboxMetricsControl.setupLatencyMeasurement(systemTimerService, mainMailboxExecutor);
+            this.epochManager = new EpochManager();
         } catch (Exception ex) {
             try {
                 resourceCloser.close();
@@ -1588,6 +1591,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                 new ProcessingTimeServiceImpl(
                         timerService,
                         callback -> deferCallbackToMailbox(mailboxExecutor, callback));
+    }
+
+    public EpochManager getEpochManager() {
+        return epochManager;
     }
 
     /**
