@@ -26,7 +26,11 @@ import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.StateTtlConfig;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncValueState;
+import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.time.Time;
+import org.apache.flink.api.common.typeinfo.TypeHint;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeutils.SimpleTypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.base.TypeSerializerSingleton;
@@ -105,7 +109,8 @@ public class WordCount {
 				.flatMap(flatMapFunction)
 				.setParallelism(configuration.getInteger(FLAT_MAP_PARALLELISM));
 
-		mapper.print().setParallelism(1);
+		//mapper.print().setParallelism(1);
+        mapper.addSink(new BlackholeSink<>());
 
 		if (jobName == null) {
 			env.execute();
@@ -213,7 +218,7 @@ public class WordCount {
 	 */
 	public static class MixedFlatMapper extends RichFlatMapFunction<Tuple2<String, Long>, Long> {
 
-		private transient ValueState<Object> wordCounter;
+		private transient AsyncValueState<Integer> wordCounter;
 
 		private final long ttl;
 
@@ -223,23 +228,25 @@ public class WordCount {
 
 		@Override
 		public void flatMap(Tuple2<String, Long> in, Collector<Long> out) throws IOException {
-			Integer currentValue = (Integer) wordCounter.value();
-
-			if (currentValue != null) {
-				wordCounter.update(currentValue + 1);
-			} else {
-				wordCounter.update(1);
-			}
-
-			out.collect(in.f1);
+            wordCounter.value().then(currentValue -> {
+                if (currentValue != null) {
+                    wordCounter.update(currentValue + 1).then(empty -> {
+                        out.collect(currentValue + 1L);
+                    });
+                } else {
+                    wordCounter.update(1).then(empty -> {
+                        out.collect(1L);
+                    });
+                }
+            });
 		}
 
 		@Override
 		public void open(Configuration config) {
-			ValueStateDescriptor<Object> descriptor =
-					new ValueStateDescriptor<>(
-							"wc",
-							INSTANCE);
+            AsyncValueStateDescriptor<Integer> descriptor =
+                    new AsyncValueStateDescriptor<>(
+                            "wc",
+                            TypeInformation.of(new TypeHint<Integer>(){}));
 			if (ttl > 0) {
 				LOG.info("Setting ttl to {}ms.", ttl);
 				StateTtlConfig ttlConfig = StateTtlConfig
@@ -249,7 +256,7 @@ public class WordCount {
 						.build();
 				descriptor.enableTimeToLive(ttlConfig);
 			}
-			wordCounter = getRuntimeContext().getState(descriptor);
+			wordCounter = getRuntimeContext().getAsyncState(descriptor);
 		}
 	}
 
