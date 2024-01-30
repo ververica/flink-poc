@@ -19,10 +19,12 @@
 package org.apache.flink.streaming.api.operators;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueElement;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSet;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Implementation of {@link InternalTimer} to use with a {@link HeapPriorityQueueSet}.
@@ -40,6 +42,8 @@ public final class TimerHeapInternalTimer<K, N>
     /** The namespace for which the timer is scoped. */
     @Nonnull private final N namespace;
 
+    @Nonnull private final RecordContext<K, ?> recordContext;
+
     /** The expiration timestamp. */
     private final long timestamp;
 
@@ -50,10 +54,15 @@ public final class TimerHeapInternalTimer<K, N>
     private transient int timerHeapIndex;
 
     public TimerHeapInternalTimer(long timestamp, @Nonnull K key, @Nonnull N namespace) {
+        this(timestamp, key, namespace, null);
+    }
+
+    public TimerHeapInternalTimer(long timestamp, @Nonnull K key, @Nonnull N namespace, @Nullable RecordContext<K, ?> recordContext) {
         this.timestamp = timestamp;
         this.key = key;
         this.namespace = namespace;
         this.timerHeapIndex = NOT_CONTAINED;
+        this.recordContext = recordContext;
     }
 
     @Override
@@ -71,6 +80,11 @@ public final class TimerHeapInternalTimer<K, N>
     @Override
     public N getNamespace() {
         return namespace;
+    }
+
+    @Override
+    public RecordContext<K, ?> getRecordContext() {
+        return recordContext;
     }
 
     @Override

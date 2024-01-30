@@ -18,6 +18,8 @@
 
 package org.apache.flink.streaming.api.operators;
 
+import org.apache.flink.runtime.state.async.RecordContext;
+
 import java.util.Collection;
 
 /**

@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators.sorted.state;
 
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
 import org.apache.flink.runtime.state.PriorityComparator;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.streaming.api.operators.InternalTimerService;
 import org.apache.flink.streaming.api.operators.TimerHeapInternalTimer;
@@ -95,7 +96,7 @@ public class BatchExecutionInternalTimeService<K, N> implements InternalTimerSer
                     time);
             return;
         }
-        processingTimeTimersQueue.add(new TimerHeapInternalTimer<>(time, currentKey, namespace));
+        processingTimeTimersQueue.add(new TimerHeapInternalTimer<>(time, currentKey, namespace, RecordContext.ofTimer(currentKey, null)));
     }
 
     @Override
@@ -109,17 +110,17 @@ public class BatchExecutionInternalTimeService<K, N> implements InternalTimerSer
                     time);
             return;
         }
-        eventTimeTimersQueue.add(new TimerHeapInternalTimer<>(time, currentKey, namespace));
+        eventTimeTimersQueue.add(new TimerHeapInternalTimer<>(time, currentKey, namespace, RecordContext.ofTimer(currentKey, null)));
     }
 
     @Override
     public void deleteProcessingTimeTimer(N namespace, long time) {
-        processingTimeTimersQueue.remove(new TimerHeapInternalTimer<>(time, currentKey, namespace));
+        processingTimeTimersQueue.remove(new TimerHeapInternalTimer<>(time, currentKey, namespace, RecordContext.ofTimer(currentKey, null)));
     }
 
     @Override
     public void deleteEventTimeTimer(N namespace, long time) {
-        eventTimeTimersQueue.remove(new TimerHeapInternalTimer<>(time, currentKey, namespace));
+        eventTimeTimersQueue.remove(new TimerHeapInternalTimer<>(time, currentKey, namespace, RecordContext.ofTimer(currentKey, null)));
     }
 
     @Override

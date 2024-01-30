@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.state.api.functions.KeyedStateBootstrapFunction;
 import org.apache.flink.state.api.output.SnapshotUtils;
 import org.apache.flink.state.api.output.TaggedOperatorSubtaskState;
@@ -81,7 +82,9 @@ public class KeyedStateBootstrapOperator<K, IN>
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
+        RecordContext recordContext = preProcessElement(element);
         userFunction.processElement(element.getValue(), context);
+        postProcessElement(recordContext);
     }
 
     @Override

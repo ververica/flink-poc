@@ -30,6 +30,7 @@ import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
 import org.apache.flink.runtime.state.KeyGroupsList;
 import org.apache.flink.runtime.state.KeyedStateCheckpointOutputStream;
 import org.apache.flink.runtime.state.PriorityQueueSetFactory;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
@@ -74,6 +75,8 @@ public class InternalTimeServiceManagerImpl<K> implements InternalTimeServiceMan
 
     private final Map<String, InternalTimerServiceImpl<K, ?>> timerServices;
 
+    private BatchingComponent batchingComponent;
+
     private InternalTimeServiceManagerImpl(
             KeyGroupRange localKeyGroupRange,
             KeyContext keyContext,
@@ -88,6 +91,10 @@ public class InternalTimeServiceManagerImpl<K> implements InternalTimeServiceMan
         this.cancellationContext = cancellationContext;
 
         this.timerServices = new HashMap<>();
+    }
+
+    public void setBatchingComponent(BatchingComponent batchingComponent) {
+        this.batchingComponent = batchingComponent;
     }
 
     /**
@@ -139,6 +146,7 @@ public class InternalTimeServiceManagerImpl<K> implements InternalTimeServiceMan
         // the following casting is to overcome type restrictions.
         TimerSerializer<K, N> timerSerializer =
                 new TimerSerializer<>(keySerializer, namespaceSerializer);
+        timerSerializer.setBatchingComponent(batchingComponent);
 
         InternalTimerServiceImpl<K, N> timerService =
                 registerOrGetTimerService(name, timerSerializer);
@@ -166,7 +174,8 @@ public class InternalTimeServiceManagerImpl<K> implements InternalTimeServiceMan
                             createTimerPriorityQueue(
                                     PROCESSING_TIMER_PREFIX + name, timerSerializer),
                             createTimerPriorityQueue(EVENT_TIMER_PREFIX + name, timerSerializer),
-                            cancellationContext);
+                            cancellationContext,
+                            batchingComponent);
 
             timerServices.put(name, timerService);
         }
@@ -235,7 +244,7 @@ public class InternalTimeServiceManagerImpl<K> implements InternalTimeServiceMan
 
         InternalTimerServiceSerializationProxy<K> serializationProxy =
                 new InternalTimerServiceSerializationProxy<>(
-                        this, userCodeClassLoader, keyGroupIdx);
+                        this, userCodeClassLoader, keyGroupIdx, batchingComponent);
 
         serializationProxy.read(stream);
     }

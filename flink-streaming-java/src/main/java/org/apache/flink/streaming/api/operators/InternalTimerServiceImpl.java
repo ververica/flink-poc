@@ -24,6 +24,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.runtime.state.InternalPriorityQueue;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
+import org.apache.flink.runtime.state.async.BatchingComponent;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
 import org.apache.flink.util.CloseableIterator;
@@ -92,13 +94,16 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N> {
     /** The restored timers snapshot, if any. */
     private InternalTimersSnapshot<K, N> restoredTimersSnapshot;
 
+    private BatchingComponent batchingComponent;
+
     InternalTimerServiceImpl(
             KeyGroupRange localKeyGroupRange,
             KeyContext keyContext,
             ProcessingTimeService processingTimeService,
             KeyGroupedInternalPriorityQueue<TimerHeapInternalTimer<K, N>> processingTimeTimersQueue,
             KeyGroupedInternalPriorityQueue<TimerHeapInternalTimer<K, N>> eventTimeTimersQueue,
-            StreamTaskCancellationContext cancellationContext) {
+            StreamTaskCancellationContext cancellationContext,
+            BatchingComponent batchingComponent) {
 
         this.keyContext = checkNotNull(keyContext);
         this.processingTimeService = checkNotNull(processingTimeService);
@@ -113,6 +118,7 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N> {
             startIdx = Math.min(keyGroupIdx, startIdx);
         }
         this.localKeyGroupRangeStartIdx = startIdx;
+        this.batchingComponent = batchingComponent;
     }
 
     /**
@@ -222,7 +228,7 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N> {
     public void registerProcessingTimeTimer(N namespace, long time) {
         InternalTimer<K, N> oldHead = processingTimeTimersQueue.peek();
         if (processingTimeTimersQueue.add(
-                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace))) {
+                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace, RecordContext.ofTimer(keyContext.getCurrentKey(), batchingComponent)))) {
             long nextTriggerTime = oldHead != null ? oldHead.getTimestamp() : Long.MAX_VALUE;
             // check if we need to re-schedule our timer to earlier
             if (time < nextTriggerTime) {
@@ -237,19 +243,19 @@ public class InternalTimerServiceImpl<K, N> implements InternalTimerService<N> {
     @Override
     public void registerEventTimeTimer(N namespace, long time) {
         eventTimeTimersQueue.add(
-                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace));
+                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace, RecordContext.ofTimer(keyContext.getCurrentKey(), batchingComponent)));
     }
 
     @Override
     public void deleteProcessingTimeTimer(N namespace, long time) {
         processingTimeTimersQueue.remove(
-                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace));
+                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace, RecordContext.ofTimer(keyContext.getCurrentKey(), batchingComponent)));
     }
 
     @Override
     public void deleteEventTimeTimer(N namespace, long time) {
         eventTimeTimersQueue.remove(
-                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace));
+                new TimerHeapInternalTimer<>(time, (K) keyContext.getCurrentKey(), namespace, RecordContext.ofTimer(keyContext.getCurrentKey(), batchingComponent)));
     }
 
     @Override

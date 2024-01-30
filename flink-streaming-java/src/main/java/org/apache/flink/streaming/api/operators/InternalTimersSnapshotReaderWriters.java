@@ -24,6 +24,8 @@ import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.base.LongSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.runtime.state.async.BatchingComponent;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.util.CollectionUtil;
 
 import javax.annotation.Nonnull;
@@ -110,7 +112,7 @@ public class InternalTimersSnapshotReaderWriters {
             writeKeyAndNamespaceSerializers(out);
 
             LegacyTimerSerializer<K, N> timerSerializer =
-                    new LegacyTimerSerializer<>(keySerializer, namespaceSerializer);
+                    new LegacyTimerSerializer<>(keySerializer, namespaceSerializer, null);
 
             // write the event time timers
             Set<TimerHeapInternalTimer<K, N>> eventTimers = timersSnapshot.getEventTimeTimers();
@@ -192,7 +194,7 @@ public class InternalTimersSnapshotReaderWriters {
          * @return the read timers snapshot
          * @throws IOException
          */
-        InternalTimersSnapshot<K, N> readTimersSnapshot(DataInputView in) throws IOException;
+        InternalTimersSnapshot<K, N> readTimersSnapshot(DataInputView in, BatchingComponent batchingComponent) throws IOException;
     }
 
     private abstract static class AbstractInternalTimersSnapshotReader<K, N>
@@ -209,7 +211,7 @@ public class InternalTimersSnapshotReaderWriters {
                 throws IOException;
 
         @Override
-        public final InternalTimersSnapshot<K, N> readTimersSnapshot(DataInputView in)
+        public final InternalTimersSnapshot<K, N> readTimersSnapshot(DataInputView in, BatchingComponent batchingComponent)
                 throws IOException {
             InternalTimersSnapshot<K, N> restoredTimersSnapshot = new InternalTimersSnapshot<>();
 
@@ -220,7 +222,7 @@ public class InternalTimersSnapshotReaderWriters {
                             restoredTimersSnapshot.getKeySerializerSnapshot().restoreSerializer(),
                             restoredTimersSnapshot
                                     .getNamespaceSerializerSnapshot()
-                                    .restoreSerializer());
+                                    .restoreSerializer(), batchingComponent);
 
             // read the event time timers
             int sizeOfEventTimeTimers = in.readInt();
@@ -280,9 +282,12 @@ public class InternalTimersSnapshotReaderWriters {
 
         @Nonnull private final TypeSerializer<N> namespaceSerializer;
 
+        private BatchingComponent batchingComponent;
+
         LegacyTimerSerializer(
                 @Nonnull TypeSerializer<K> keySerializer,
-                @Nonnull TypeSerializer<N> namespaceSerializer) {
+                @Nonnull TypeSerializer<N> namespaceSerializer,
+                BatchingComponent batchingComponent) {
             this.keySerializer = keySerializer;
             this.namespaceSerializer = namespaceSerializer;
         }
@@ -306,7 +311,7 @@ public class InternalTimersSnapshotReaderWriters {
                 // at least one delegate serializer seems to be stateful, so we return a new
                 // instance.
                 return new LegacyTimerSerializer<>(
-                        keySerializerDuplicate, namespaceSerializerDuplicate);
+                        keySerializerDuplicate, namespaceSerializerDuplicate, batchingComponent);
             }
         }
 
@@ -318,7 +323,7 @@ public class InternalTimersSnapshotReaderWriters {
         @Override
         public TimerHeapInternalTimer<K, N> copy(TimerHeapInternalTimer<K, N> from) {
             return new TimerHeapInternalTimer<>(
-                    from.getTimestamp(), from.getKey(), from.getNamespace());
+                    from.getTimestamp(), from.getKey(), from.getNamespace(), from.getRecordContext());
         }
 
         @Override
@@ -346,7 +351,8 @@ public class InternalTimersSnapshotReaderWriters {
             K key = keySerializer.deserialize(source);
             N namespace = namespaceSerializer.deserialize(source);
             Long timestamp = LongSerializer.INSTANCE.deserialize(source);
-            return new TimerHeapInternalTimer<>(timestamp, key, namespace);
+            return new TimerHeapInternalTimer<>(timestamp, key, namespace,
+                    RecordContext.ofTimer(key, batchingComponent));
         }
 
         @Override

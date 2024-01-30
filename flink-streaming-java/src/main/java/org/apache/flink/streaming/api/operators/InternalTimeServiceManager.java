@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.CheckpointableKeyedStateBackend;
 import org.apache.flink.runtime.state.KeyGroupStatePartitionStreamProvider;
 import org.apache.flink.runtime.state.KeyedStateCheckpointOutputStream;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
@@ -81,4 +82,6 @@ public interface InternalTimeServiceManager<K> {
                 StreamTaskCancellationContext cancellationContext)
                 throws Exception;
     }
+
+    default void setBatchingComponent(BatchingComponent batchingComponent) {}
 }

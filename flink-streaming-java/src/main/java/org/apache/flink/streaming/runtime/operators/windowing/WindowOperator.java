@@ -49,6 +49,7 @@ import org.apache.flink.runtime.state.DefaultKeyedStateStore;
 import org.apache.flink.runtime.state.KeyedStateBackend;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.runtime.state.internal.InternalAppendingState;
 import org.apache.flink.runtime.state.internal.InternalListState;
 import org.apache.flink.runtime.state.internal.InternalMergingState;
@@ -276,6 +277,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
+        RecordContext recordContext = preProcessElement(element);
         final Collection<W> elementWindows =
                 windowAssigner.assignWindows(
                         element.getValue(), element.getTimestamp(), windowAssignerContext);
@@ -431,10 +433,12 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
                 this.numLateRecordsDropped.inc();
             }
         }
+        postProcessElement(recordContext);
     }
 
     @Override
     public void onEventTime(InternalTimer<K, W> timer) throws Exception {
+        timer.getRecordContext().retain();
         triggerContext.key = timer.getKey();
         triggerContext.window = timer.getNamespace();
 
@@ -478,12 +482,14 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
             // need to make sure to update the merging state in state
             mergingWindows.persist();
         }
+        timer.getRecordContext().release();
     }
 
     @Override
     public void onProcessingTime(InternalTimer<K, W> timer) throws Exception {
         triggerContext.key = timer.getKey();
         triggerContext.window = timer.getNamespace();
+        timer.getRecordContext().retain();
 
         MergingWindowSet<W> mergingWindows;
 
@@ -525,6 +531,7 @@ public class WindowOperator<K, IN, ACC, OUT, W extends Window>
             // need to make sure to update the merging state in state
             mergingWindows.persist();
         }
+        timer.getRecordContext().release();
     }
 
     /**
