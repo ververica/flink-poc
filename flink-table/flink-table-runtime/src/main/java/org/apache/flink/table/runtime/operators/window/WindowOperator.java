@@ -30,6 +30,7 @@ import org.apache.flink.metrics.Gauge;
 import org.apache.flink.metrics.Meter;
 import org.apache.flink.metrics.MeterView;
 import org.apache.flink.metrics.MetricGroup;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.runtime.state.internal.InternalMergingState;
 import org.apache.flink.runtime.state.internal.InternalValueState;
 import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
@@ -329,6 +330,7 @@ public abstract class WindowOperator<K, W extends Window> extends AbstractStream
 
     @Override
     public void processElement(StreamRecord<RowData> record) throws Exception {
+        RecordContext recordContext = preProcessElement(record);
         RowData inputRow = record.getValue();
         long timestamp;
         if (windowAssigner.isEventTime()) {
@@ -378,12 +380,13 @@ public abstract class WindowOperator<K, W extends Window> extends AbstractStream
             // markEvent will increase numLateRecordsDropped
             lateRecordsDroppedRate.markEvent();
         }
+        postProcessElement(recordContext);
     }
 
     @Override
     public void onEventTime(InternalTimer<K, W> timer) throws Exception {
+        timer.getRecordContext().retain();
         setCurrentKey(timer.getKey());
-
         triggerContext.window = timer.getNamespace();
         if (triggerContext.onEventTime(timer.getTimestamp())) {
             // fire
@@ -393,10 +396,12 @@ public abstract class WindowOperator<K, W extends Window> extends AbstractStream
         if (windowAssigner.isEventTime()) {
             windowFunction.cleanWindowIfNeeded(triggerContext.window, timer.getTimestamp());
         }
+        timer.getRecordContext().release();
     }
 
     @Override
     public void onProcessingTime(InternalTimer<K, W> timer) throws Exception {
+        timer.getRecordContext().retain();
         setCurrentKey(timer.getKey());
 
         triggerContext.window = timer.getNamespace();
@@ -408,6 +413,7 @@ public abstract class WindowOperator<K, W extends Window> extends AbstractStream
         if (!windowAssigner.isEventTime()) {
             windowFunction.cleanWindowIfNeeded(triggerContext.window, timer.getTimestamp());
         }
+        timer.getRecordContext().release();
     }
 
     /** Emits the window result of the given window. */

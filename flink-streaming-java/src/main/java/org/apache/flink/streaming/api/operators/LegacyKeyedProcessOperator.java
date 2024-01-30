@@ -20,6 +20,7 @@ package org.apache.flink.streaming.api.operators;
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.state.VoidNamespace;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.streaming.api.SimpleTimerService;
 import org.apache.flink.streaming.api.TimeDomain;
 import org.apache.flink.streaming.api.TimerService;
@@ -83,19 +84,23 @@ public class LegacyKeyedProcessOperator<K, IN, OUT>
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
+        RecordContext recordContext = preProcessElement(element);
         collector.setTimestamp(element);
         context.element = element;
         userFunction.processElement(element.getValue(), context, collector);
         context.element = null;
+        postProcessElement(recordContext);
     }
 
     private void invokeUserFunction(TimeDomain timeDomain, InternalTimer<K, VoidNamespace> timer)
             throws Exception {
+        timer.getRecordContext().retain();
         onTimerContext.timeDomain = timeDomain;
         onTimerContext.timer = timer;
         userFunction.onTimer(timer.getTimestamp(), onTimerContext, collector);
         onTimerContext.timeDomain = null;
         onTimerContext.timer = null;
+        timer.getRecordContext().release();
     }
 
     private class ContextImpl extends ProcessFunction<IN, OUT>.Context {

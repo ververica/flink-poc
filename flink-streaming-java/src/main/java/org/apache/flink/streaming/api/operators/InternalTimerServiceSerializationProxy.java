@@ -23,6 +23,7 @@ import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.io.PostVersionedIOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.runtime.state.async.BatchingComponent;
 
 import java.io.IOException;
 import java.util.Map;
@@ -44,14 +45,18 @@ public class InternalTimerServiceSerializationProxy<K> extends PostVersionedIORe
     /** Properties of restored timer services. */
     private final int keyGroupIdx;
 
+    private BatchingComponent batchingComponent;
+
     /** Constructor to use when restoring timer services. */
     public InternalTimerServiceSerializationProxy(
             InternalTimeServiceManagerImpl<K> timerServicesManager,
             ClassLoader userCodeClassLoader,
-            int keyGroupIdx) {
+            int keyGroupIdx,
+            BatchingComponent batchingComponent) {
         this.timerServicesManager = checkNotNull(timerServicesManager);
         this.userCodeClassLoader = checkNotNull(userCodeClassLoader);
         this.keyGroupIdx = keyGroupIdx;
+        this.batchingComponent = batchingComponent;
     }
 
     /** Constructor to use when writing timer services. */
@@ -108,7 +113,7 @@ public class InternalTimerServiceSerializationProxy<K> extends PostVersionedIORe
             InternalTimersSnapshot<?, ?> restoredTimersSnapshot =
                     InternalTimersSnapshotReaderWriters.getReaderForVersion(
                                     readerVersion, userCodeClassLoader)
-                            .readTimersSnapshot(in);
+                            .readTimersSnapshot(in, batchingComponent);
 
             InternalTimerServiceImpl<K, ?> timerService =
                     registerOrGetTimerService(serviceName, restoredTimersSnapshot);

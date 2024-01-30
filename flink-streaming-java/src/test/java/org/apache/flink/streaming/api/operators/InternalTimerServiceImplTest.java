@@ -28,6 +28,7 @@ import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.runtime.state.KeyGroupRangeAssignment;
 import org.apache.flink.runtime.state.KeyGroupedInternalPriorityQueue;
 import org.apache.flink.runtime.state.PriorityQueueSetFactory;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.runtime.state.heap.HeapPriorityQueueSetFactory;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTaskCancellationContext;
@@ -1045,7 +1046,7 @@ public class InternalTimerServiceImplTest {
                                             snapshotVersion,
                                             InternalTimerServiceImplTest.class.getClassLoader())
                                     .readTimersSnapshot(
-                                            new DataInputViewStreamWrapper(inputStream));
+                                            new DataInputViewStreamWrapper(inputStream), null);
 
                     service.restoreTimersForKeyGroup(restoredTimersSnapshot, keyGroupIndex);
                 }
@@ -1102,7 +1103,8 @@ public class InternalTimerServiceImplTest {
                 createTimerQueue(
                         "__test_processing_timers", timerSerializer, priorityQueueSetFactory),
                 createTimerQueue("__test_event_timers", timerSerializer, priorityQueueSetFactory),
-                StreamTaskCancellationContext.alwaysRunning());
+                StreamTaskCancellationContext.alwaysRunning(),
+                null);
     }
 
     private static <K, N>

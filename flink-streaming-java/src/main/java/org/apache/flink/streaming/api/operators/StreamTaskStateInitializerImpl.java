@@ -106,6 +106,8 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
 
     private final MailboxExecutor mailboxExecutor;
 
+    private final BatchingComponent stateBatchingComponent;
+
     public StreamTaskStateInitializerImpl(Environment environment, StateBackend stateBackend) {
 
         this(
@@ -133,6 +135,10 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         this.timeServiceManagerProvider = Preconditions.checkNotNull(timeServiceManagerProvider);
         this.cancellationContext = cancellationContext;
         this.mailboxExecutor = mailboxExecutor;
+        this.stateBatchingComponent = new BatchingComponent<>(
+                mailboxExecutor,
+                environment.getExecutionConfig().getBatchingComponentBatchSize(),
+                environment.getExecutionConfig().getBatchingComponentMaxInFlightRecordNum());
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -173,10 +179,6 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
         try {
 
             // -------------- Keyed State Backend --------------
-            BatchingComponent stateBatchingComponent = new BatchingComponent<>(
-                    mailboxExecutor,
-                    batchComponentBatchSize,
-                    batchComponentMaxInFlightRecordNum);
             keyedStatedBackend =
                     keyedStatedBackend(
                             keySerializer,
@@ -232,6 +234,7 @@ public class StreamTaskStateInitializerImpl implements StreamTaskStateInitialize
                                 processingTimeService,
                                 restoredRawKeyedStateTimers,
                                 cancellationContext);
+                timeServiceManager.setBatchingComponent(stateBatchingComponent);
             } else {
                 timeServiceManager = null;
             }

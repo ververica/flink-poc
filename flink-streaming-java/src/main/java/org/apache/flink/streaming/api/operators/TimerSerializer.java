@@ -22,6 +22,8 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.runtime.state.async.BatchingComponent;
+import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.util.MathUtils;
 
 import javax.annotation.Nonnull;
@@ -50,6 +52,8 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
     /** Serializer for the namespace. */
     @Nonnull private final TypeSerializer<N> namespaceSerializer;
 
+    private BatchingComponent batchingComponent = null;
+
     /** The bytes written for one timer, or -1 if variable size. */
     private final int length;
 
@@ -64,6 +68,10 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
                 namespaceSerializer,
                 computeTotalByteLength(keySerializer, namespaceSerializer),
                 keySerializer.isImmutableType() && namespaceSerializer.isImmutableType());
+    }
+
+    public void setBatchingComponent(BatchingComponent batchingComponent) {
+        this.batchingComponent = batchingComponent;
     }
 
     private TimerSerializer(
@@ -112,8 +120,9 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
 
     @Override
     public TimerHeapInternalTimer<K, N> createInstance() {
-        return new TimerHeapInternalTimer<>(
-                0L, keySerializer.createInstance(), namespaceSerializer.createInstance());
+        K key = keySerializer.createInstance();
+        return new TimerHeapInternalTimer<>(0L, key, namespaceSerializer.createInstance(),
+                RecordContext.ofTimer(key, batchingComponent));
     }
 
     @Override
@@ -129,7 +138,8 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
             namespaceDuplicate = namespaceSerializer.copy(from.getNamespace());
         }
 
-        return new TimerHeapInternalTimer<>(from.getTimestamp(), keyDuplicate, namespaceDuplicate);
+        return new TimerHeapInternalTimer<>(from.getTimestamp(), keyDuplicate, namespaceDuplicate,
+                RecordContext.ofTimer(keyDuplicate, batchingComponent));
     }
 
     @Override
@@ -156,7 +166,7 @@ public class TimerSerializer<K, N> extends TypeSerializer<TimerHeapInternalTimer
         long timestamp = MathUtils.flipSignBit(source.readLong());
         K key = keySerializer.deserialize(source);
         N namespace = namespaceSerializer.deserialize(source);
-        return new TimerHeapInternalTimer<>(timestamp, key, namespace);
+        return new TimerHeapInternalTimer<>(timestamp, key, namespace, RecordContext.ofTimer(key, batchingComponent));
     }
 
     @Override

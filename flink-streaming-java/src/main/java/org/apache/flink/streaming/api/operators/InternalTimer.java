@@ -23,6 +23,7 @@ import org.apache.flink.runtime.state.KeyExtractorFunction;
 import org.apache.flink.runtime.state.Keyed;
 import org.apache.flink.runtime.state.PriorityComparable;
 import org.apache.flink.runtime.state.PriorityComparator;
+import org.apache.flink.runtime.state.async.RecordContext;
 
 import javax.annotation.Nonnull;
 
@@ -55,4 +56,6 @@ public interface InternalTimer<K, N> extends PriorityComparable<InternalTimer<?,
     /** Returns the namespace that is bound to this timer. */
     @Nonnull
     N getNamespace();
+
+    RecordContext<K, ?> getRecordContext();
 }

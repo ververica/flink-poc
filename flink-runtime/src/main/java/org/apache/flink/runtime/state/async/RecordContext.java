@@ -27,6 +27,10 @@ public class RecordContext<K, R> extends ReferenceCounted {
         this.recordCallback = recordCallback;
     }
 
+    public static <KEY> RecordContext ofTimer(KEY key, BatchingComponent batchingComponent) {
+        return new RecordContext<>(null, key, -1L, batchingComponent, null);
+    }
+
     public R getRecord() {
         return record;
     }
@@ -41,7 +45,9 @@ public class RecordContext<K, R> extends ReferenceCounted {
 
     @Override
     protected void referenceCountReachedZero() {
-        batchingComponentHandle.releaseStateAccessToken(record, key);
-        recordCallback.accept(recordId);
+        if (batchingComponentHandle!= null) {
+            batchingComponentHandle.releaseStateAccessToken(record, key);
+            recordCallback.accept(recordId);
+        }
     }
 }
