@@ -101,7 +101,8 @@ public class RemoteRocksDBStateBackend extends EmbeddedRocksDBStateBackend {
         this.ioParallelism = init ? original.ioParallelism : config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_IO_PARALLELISM);
         RemoteRocksdbFlinkFileSystem.configureCacheTtl(
                 config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_LIVE_MILLS),
-                config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_TIMEOUT_MILLS));
+                config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_TIMEOUT_MILLS),
+                config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_FS_CACHE_CAPACITY));
         RemoteRocksdbFlinkFileSystem.configureBlockBasedCache(
                 config.get(RemoteRocksDBOptions.REMOTE_ROCKSDB_BLOCK_CACHE_SIZE));
         LOG.info("Create RemoteRocksDBStateBackend with remoteRocksDBMode {}, enableCacheLayer {}, workingDir {}, ioParallelism {}",
