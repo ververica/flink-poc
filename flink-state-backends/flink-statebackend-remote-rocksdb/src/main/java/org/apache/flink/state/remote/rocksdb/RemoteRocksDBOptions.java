@@ -64,6 +64,12 @@ public class RemoteRocksDBOptions {
                     .defaultValue(0L)
                     .withDescription("");
 
+    public static final ConfigOption<Long> REMOTE_ROCKSDB_FS_CACHE_CAPACITY =
+            ConfigOptions.key("state.backend.remote-rocksdb.fs-cache.capacity")
+                    .longType()
+                    .defaultValue(0L)
+                    .withDescription("");
+
     public static final ConfigOption<Long> REMOTE_ROCKSDB_READ_AHEAD_FOR_COMPACTION =
             ConfigOptions.key("state.backend.remote-rocksdb.compaction.read-ahead.size")
                     .longType()

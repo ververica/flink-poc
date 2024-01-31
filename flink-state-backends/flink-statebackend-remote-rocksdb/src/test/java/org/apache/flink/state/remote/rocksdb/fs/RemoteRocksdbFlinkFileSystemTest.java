@@ -23,14 +23,19 @@ import org.apache.flink.core.fs.local.LocalFileSystem;
 
 import org.apache.flink.state.remote.rocksdb.fs.cache.FileBasedCache;
 
+import org.apache.flink.testutils.junit.utils.TempDirUtils;
 import org.apache.flink.util.concurrent.FutureUtils;
 
 import org.junit.Assert;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
@@ -39,11 +44,14 @@ import java.util.concurrent.CompletionException;
  */
 public class RemoteRocksdbFlinkFileSystemTest {
 
+    @ClassRule
+    public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+
     @Test
     public void testByteBufferInputStreamAndOutputStream() throws Exception {
         LocalFileSystem fileSystem = new LocalFileSystem();
         Path testFilePathForCache = new Path("/tmp", "cache");
-        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L), null);
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L, 0L), null);
         Path testFilePath = new Path("/tmp", "test-1");
         ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
         ByteBuffer writeBuffer = ByteBuffer.allocate(20);
@@ -147,5 +155,34 @@ public class RemoteRocksdbFlinkFileSystemTest {
         inputStream.close();
         remoteRocksdbFlinkFileSystem.delete(testFilePath, true);
         Assert.assertFalse(remoteRocksdbFlinkFileSystem.exists(testFilePath));
+    }
+
+    @Test
+    public void testLRUFileBasedCache() throws IOException {
+        LocalFileSystem fileSystem = new LocalFileSystem();
+        Path testFilePathForCache = new Path(temporaryFolder.newFolder("cache").toString());
+        String testFilePathForWork = temporaryFolder.newFolder("work").toString();
+        RemoteRocksdbFlinkFileSystem remoteRocksdbFlinkFileSystem = new RemoteRocksdbFlinkFileSystem(fileSystem, new FileBasedCache(fileSystem, testFilePathForCache, 3000, 0L, 10000L), null);
+        Random random = new Random();
+        for (int i = 0; i < 10; i++) {
+            Path testFilePath = new Path(testFilePathForWork, "test-" + i);
+            ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
+            byte[] buffer = new byte[1000];
+            random.nextBytes(buffer);
+            outputStream.write(buffer, 0, 1000);
+            outputStream.close();
+        }
+        Assert.assertEquals(10, fileSystem.listStatus(testFilePathForCache).length);
+        Assert.assertEquals(10, fileSystem.listStatus(new Path(testFilePathForWork)).length);
+        for (int i = 10; i < 15; i++) {
+            Path testFilePath = new Path(testFilePathForWork, "test-" + i);
+            ByteBufferWritableFSDataOutputStream outputStream = remoteRocksdbFlinkFileSystem.create(testFilePath);
+            byte[] buffer = new byte[1000];
+            random.nextBytes(buffer);
+            outputStream.write(buffer, 0, 1000);
+            outputStream.close();
+            Assert.assertEquals(10, fileSystem.listStatus(testFilePathForCache).length);
+        }
+
     }
 }

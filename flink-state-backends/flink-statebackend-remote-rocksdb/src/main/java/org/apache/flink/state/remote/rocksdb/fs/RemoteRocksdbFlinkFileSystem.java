@@ -45,6 +45,8 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
 
     private static long cacheTimeout = 0L;
 
+    private static long cacheCapacity = 0L;
+
     private static long blockCacheSize = 0L;
 
     private static MetricGroup metricGroup = null;
@@ -81,9 +83,10 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
         cacheBase = path;
     }
 
-    public static void configureCacheTtl(long ttl, long timeout) {
+    public static void configureCacheTtl(long ttl, long timeout, long capacity) {
         cacheTtl = ttl;
         cacheTimeout = timeout;
+        cacheCapacity = capacity;
     }
 
     public static void configureBlockBasedCache(long size) {
@@ -97,7 +100,7 @@ public class RemoteRocksdbFlinkFileSystem extends FileSystem {
     public static FileSystem get(URI uri) throws IOException {
         return new RemoteRocksdbFlinkFileSystem(
                 FileSystem.get(uri),
-                (cacheBase == null || cacheTtl <= 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout, metricGroup.addGroup("fs_cache")),
+                (cacheBase == null || cacheTtl <= 0L) ? null : new FileBasedCache(new LocalFileSystem(), childCacheBase(cacheBase), cacheTtl, cacheTimeout, cacheCapacity, metricGroup.addGroup("fs_cache")),
                 blockCacheSize <= 0L ? null : new BlockBasedCache(Integer.MAX_VALUE, blockCacheSize, metricGroup.addGroup("block_cache"))
         );
     }

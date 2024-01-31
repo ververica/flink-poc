@@ -30,14 +30,15 @@ import org.apache.flink.metrics.MetricGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class FileBasedCache implements Closeable {
@@ -49,7 +50,12 @@ public class FileBasedCache implements Closeable {
 
     private final long cacheTtl;
 
-    private final ConcurrentHashMap<Path, CacheEntry> cacheMap;
+    private final long capacity;
+
+    private final Object lock = new Object();
+
+    @GuardedBy("lock")
+    private final LinkedHashMap<Path, CacheEntry> cacheMap;
 
     private final ScheduledExecutorService timeTickService;
 
@@ -61,15 +67,16 @@ public class FileBasedCache implements Closeable {
 
     private final AtomicLong cacheSize = new AtomicLong(0L);
 
-    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout) {
-        this(flinkFs, basePath, cacheTtl, timeout, null);
+    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout, long capacity) {
+        this(flinkFs, basePath, cacheTtl, timeout, capacity, null);
     }
 
-    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout, MetricGroup metricGroup) {
+    public FileBasedCache(FileSystem flinkFs, Path basePath, long cacheTtl, long timeout, long capacity, MetricGroup metricGroup) {
         this.cacheFs = flinkFs;
         this.basePath = basePath;
         this.cacheTtl = cacheTtl;
-        this.cacheMap = new ConcurrentHashMap<>();
+        this.capacity = capacity;
+        this.cacheMap = new LinkedHashMap<>();
         ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("CacheDeleteTickTimeService-%d").build();
         this.timeTickService = new ScheduledThreadPoolExecutor(1, threadFactory);
         this.closed = false;
@@ -87,7 +94,9 @@ public class FileBasedCache implements Closeable {
         if (!closed) {
             closed = true;
             timeTickService.shutdownNow();
-            cacheMap.values().forEach(CacheEntry::invalidate);
+            synchronized (lock) {
+                cacheMap.values().forEach(CacheEntry::invalidate);
+            }
             LOG.info("Local fs-cache closed");
         }
     }
@@ -97,7 +106,7 @@ public class FileBasedCache implements Closeable {
     }
 
     void scheduleClose(long timeout) {
-        if (timeout > 0L) {
+        if (timeout > 0L && capacity <= 0L) {
             timeTickService.schedule(this::close, timeout, TimeUnit.MILLISECONDS);
         }
     }
@@ -106,7 +115,11 @@ public class FileBasedCache implements Closeable {
         if (closed) {
             return null;
         }
-        CacheEntry entry = cacheMap.get(path);
+
+        CacheEntry entry = null;
+        synchronized (lock) {
+            entry = cacheMap.get(path);
+        }
         if (entry != null) {
             return new CachedDataInputStream(entry);
         } else {
@@ -119,7 +132,9 @@ public class FileBasedCache implements Closeable {
             return null;
         }
         CacheEntry entry = new CacheEntry(path, getCachePath(path));
-        cacheMap.put(path, entry);
+        synchronized (lock) {
+            cacheMap.put(path, entry);
+        }
         return new CachedDataOutputStream(entry);
     }
 
@@ -188,8 +203,11 @@ public class FileBasedCache implements Closeable {
             writing = false;
             release();
             if (!closed) {
-                scheduleDelete(this);
+                if (capacity <= 0L) {
+                    scheduleDelete(this);
+                }
             }
+            evictIfNeeded();
         }
 
         public void close4Read() {
@@ -203,10 +221,29 @@ public class FileBasedCache implements Closeable {
             }
         }
 
+        // Don't remove entry from cacheMap to avoid ConcurrentModificationException
+        public synchronized void evict() {
+            if (!closed) {
+                closed = true;
+                try {
+                    if (fsDataInputStream != null) {
+                        fsDataInputStream.close();
+                        fsDataInputStream = null;
+                    }
+                    cacheSize.addAndGet(-entrySize);
+                    cacheFs.delete(cachePath, false);
+                } catch (Exception e) {
+                    // ignore;
+                }
+            }
+        }
+
         @Override
         protected void referenceCountReachedZero() {
             try {
-                cacheMap.remove(originalPath);
+                synchronized (lock) {
+                    cacheMap.remove(originalPath);
+                }
                 if (fsDataInputStream != null) {
                     fsDataInputStream.close();
                     fsDataInputStream = null;
@@ -215,6 +252,27 @@ public class FileBasedCache implements Closeable {
                 cacheFs.delete(cachePath, false);
             } catch (Exception e) {
                 // ignore;
+            }
+        }
+    }
+
+    private void evictIfNeeded() {
+        ArrayList<Path> toRemove = new ArrayList<>();
+        if (capacity > 0 && cacheSize.get() > capacity) {
+            synchronized (lock) {
+                if (cacheMap.size() < 2) {
+                    return;
+                }
+                for (CacheEntry entry : cacheMap.values()) {
+                    toRemove.add(entry.originalPath);
+                    entry.evict();
+                    if (cacheSize.get() <= capacity) {
+                        break;
+                    }
+                }
+                for (Path path : toRemove) {
+                    cacheMap.remove(path);
+                }
             }
         }
     }
