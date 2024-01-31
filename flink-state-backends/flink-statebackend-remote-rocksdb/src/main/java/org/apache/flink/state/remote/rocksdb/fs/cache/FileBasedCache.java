@@ -222,7 +222,7 @@ public class FileBasedCache implements Closeable {
         }
 
         // Don't remove entry from cacheMap to avoid ConcurrentModificationException
-        public synchronized void evict() {
+        public void evict() {
             if (!closed) {
                 closed = true;
                 try {
@@ -271,6 +271,9 @@ public class FileBasedCache implements Closeable {
                     }
                 }
                 for (Path path : toRemove) {
+                    if (cacheMap.size() < 2) {
+                        break;
+                    }
                     cacheMap.remove(path);
                 }
             }

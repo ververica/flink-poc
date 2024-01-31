@@ -83,12 +83,12 @@ public class WordCount {
 
 		configureCheckpoint(env, configuration);
 //
-//		String group1 = "default1";
-//		String group2 = "default2";
-//		String group3 = "default3";
-//		if (configuration.getBoolean(SHARING_GROUP)) {
-//			group1 = group2 = group3 = "default";
-//		}
+		String group1 = "default1";
+		String group2 = "default2";
+		String group3 = "default3";
+		if (configuration.getBoolean(SHARING_GROUP)) {
+			group1 = group2 = group3 = "default";
+		}
 
 		setStateBackend(env, configuration);
 
