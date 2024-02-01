@@ -83,7 +83,7 @@ public class WordCountTest {
         FileSystem.initialize(config, null);
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
-        //env.enableCheckpointing(500);
+        env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 20, 100, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
@@ -94,11 +94,12 @@ public class WordCountTest {
     public void testWordCountWithHDFS() throws Exception {
         Configuration config = getCommonConfiguration();
         config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-0849d7666eaf1f6c.cn-beijing.emr.aliyuncs.com:9000/tmp");
+        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://master-1-1.c-c251b6f4b234d138.cn-beijing.emr.aliyuncs.com:9000/tmp/testWordCountWithHDFS");
+        config.set(CHECKPOINTS_DIRECTORY, "hdfs://master-1-1.c-c251b6f4b234d138.cn-beijing.emr.aliyuncs.com:9000/tmp/testWordCountWithHDFS-checkpoint");
         FileSystem.initialize(config, null);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
-        //env.enableCheckpointing(500);
-        DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
+        env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 100, 50, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();

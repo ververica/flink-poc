@@ -117,6 +117,8 @@ public class FileSystemSafetyNet {
 
     static FileSystem wrapWithSafetyNetWhenActivated(FileSystem fs) {
         SafetyNetCloseableRegistry reg = REGISTRIES.get();
-        return reg != null ? new SafetyNetWrapperFileSystem(fs, reg) : fs;
+        return reg != null
+                ? (fs instanceof DuplicatingFileSystem ? new SafetyNetWrapperDuplicatingFileSystem(fs, reg) : new SafetyNetWrapperFileSystem(fs, reg))
+                : fs;
     }
 }

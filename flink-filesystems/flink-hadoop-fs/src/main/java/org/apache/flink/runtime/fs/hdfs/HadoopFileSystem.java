@@ -19,14 +19,20 @@
 package org.apache.flink.runtime.fs.hdfs;
 
 import org.apache.flink.core.fs.BlockLocation;
+import org.apache.flink.core.fs.DuplicatingFileSystem;
 import org.apache.flink.core.fs.FileStatus;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystemKind;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.RecoverableWriter;
 
+import org.apache.flink.util.Preconditions;
+
+import org.apache.hadoop.fs.FileUtil;
+
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 import java.util.Locale;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -34,7 +40,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 /**
  * A {@link FileSystem} that wraps an {@link org.apache.hadoop.fs.FileSystem Hadoop File System}.
  */
-public class HadoopFileSystem extends FileSystem {
+public class HadoopFileSystem extends FileSystem implements DuplicatingFileSystem {
 
     /** The wrapped Hadoop File System. */
     private final org.apache.hadoop.fs.FileSystem fs;
@@ -253,6 +259,29 @@ public class HadoopFileSystem extends FileSystem {
             // the remainder should include hdfs, kosmos, ceph, ...
             // this also includes federated HDFS (viewfs).
             return FileSystemKind.FILE_SYSTEM;
+        }
+    }
+
+    @Override
+    public boolean canFastDuplicate(Path source, Path destination) throws IOException {
+        return  fs.getScheme().equals(source.toUri().getScheme())
+                && source.toUri().getScheme().equals(destination.toUri().getScheme())
+                && source.toUri().getAuthority().equals(destination.toUri().getAuthority());
+    }
+
+    @Override
+    public void duplicate(List<CopyRequest> requests) throws IOException {
+        Preconditions.checkArgument(requests.size() == 1, "Only support to duplicate one file");
+        CopyRequest copyRequest = requests.get(0);
+        boolean success = FileUtil.copy(fs, toHadoopPath(copyRequest.getSource()),
+                fs, toHadoopPath(copyRequest.getDestination()),
+                false, false, fs.getConf());
+        if (!success) {
+            throw new IOException(
+                    String.format(
+                            "Fail when hadoop duplicates file from %s to %s.",
+                            copyRequest.getSource(), copyRequest.getDestination()));
+
         }
     }
 }

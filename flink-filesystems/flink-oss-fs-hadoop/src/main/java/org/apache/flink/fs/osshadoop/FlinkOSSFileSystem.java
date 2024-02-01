@@ -18,7 +18,9 @@
 
 package org.apache.flink.fs.osshadoop;
 
+import org.apache.flink.core.fs.DuplicatingFileSystem;
 import org.apache.flink.core.fs.FileSystemKind;
+import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.fs.RecoverableWriter;
 import org.apache.flink.core.fs.RefCountedFileWithStream;
 import org.apache.flink.core.fs.RefCountedTmpFileCreator;
@@ -29,6 +31,7 @@ import org.apache.flink.util.function.FunctionWithException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -37,7 +40,7 @@ import java.util.concurrent.Executors;
  * This class implements the common behavior implemented directly by Flink and delegates common
  * calls to an implementation of Hadoop's filesystem abstraction.
  */
-public class FlinkOSSFileSystem extends HadoopFileSystem {
+public class FlinkOSSFileSystem extends HadoopFileSystem implements DuplicatingFileSystem {
 
     // Minimum size of each of or multipart pieces in bytes
     public static final long MULTIPART_UPLOAD_PART_SIZE_MIN = 10L << 20;
@@ -99,5 +102,31 @@ public class FlinkOSSFileSystem extends HadoopFileSystem {
 
     public String getLocalTmpDir() {
         return localTmpDir;
+    }
+
+    @Override
+    public boolean canFastDuplicate(Path source, Path destination) throws IOException {
+        // Fast duplication could be supported only when two objects locate in same bucket.
+        // Note: Appending objects don't support copyFile. it's not used in current system.
+        return ossAccessor.getScheme().equals(source.toUri().getScheme())
+                && source.toUri().getScheme().equals(destination.toUri().getScheme())
+                && source.toUri().getAuthority().equals(destination.toUri().getAuthority());
+    }
+
+    @Override
+    public void duplicate(List<CopyRequest> requests) throws IOException {
+        // TODO: With current design of interface, the failure of duplicating single file
+        // cannot be handled gracefully while duplicating more than one file.
+        Preconditions.checkArgument(requests.size() == 1, "Only support to duplicate one file");
+        CopyRequest copyRequest = requests.get(0);
+        // canFastDuplicate must be called before duplicate, then srcLen will not be used.
+        boolean success =
+                ossAccessor.copyFile(copyRequest.getSource(), copyRequest.getDestination());
+        if (!success) {
+            throw new IOException(
+                    String.format(
+                            "Fail when oss duplicates file from %s to %s.",
+                            copyRequest.getSource(), copyRequest.getDestination()));
+        }
     }
 }
