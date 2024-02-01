@@ -26,6 +26,8 @@ import com.aliyun.oss.model.PartETag;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystemStore;
 
+import javax.annotation.Nonnull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -96,5 +98,22 @@ public class OSSAccessor {
 
         String crcFileName = "." + localPath.getName() + ".crc";
         (new File(localPath.getParent().toString() + "/" + crcFileName)).delete();
+    }
+
+    @Nonnull
+    public String getScheme() {
+        return fs.getScheme();
+    }
+
+
+    /**
+     * Copy file from src path to dst path.
+     *
+     * @see <a href="https://help.aliyun.com/document_detail/84843.html">CopyFile</a>
+     */
+    public boolean copyFile(Path srcPath, Path dstPath) {
+        String srcKey = pathToObject(srcPath);
+        long contentLength = store.getObjectMetadata(srcKey).getContentLength();
+        return store.copyFile(pathToObject(srcPath), contentLength, pathToObject(dstPath));
     }
 }

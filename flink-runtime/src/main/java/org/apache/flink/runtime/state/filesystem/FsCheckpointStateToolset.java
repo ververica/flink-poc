@@ -28,6 +28,7 @@ import org.apache.flink.runtime.state.StreamStateHandle;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -85,7 +86,8 @@ public class FsCheckpointStateToolset implements CheckpointStateToolset {
     }
 
     private Path getNewDstPath(String fileName) throws IOException {
-        final Path dst = new Path(basePath, fileName);
+        final String uuid = UUID.randomUUID().toString();
+        final Path dst = new Path(basePath, uuid + "-" + fileName);
         return EntropyInjector.addEntropy(dst.getFileSystem(), dst);
     }
 }
