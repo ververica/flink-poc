@@ -82,7 +82,7 @@ public class WordCount {
 		String jobName = configuration.getString(JOB_NAME);
 
 		configureCheckpoint(env, configuration);
-//
+
 		String group1 = "default1";
 		String group2 = "default2";
 		String group3 = "default3";
@@ -98,7 +98,8 @@ public class WordCount {
 		int wordRate = configuration.getInteger(WORD_RATE);
 
 		DataStream<Tuple2<String, Long>> source =
-				WordSource.getSource(env, wordRate, wordNumber, wordLength).setParallelism(1);
+				WordSource.getSource(env, wordRate, wordNumber, wordLength).setParallelism(1)
+                        .slotSharingGroup(group1);
 
 		// configure ttl
 		long ttl = configuration.get(TTL).toMillis();
@@ -107,10 +108,11 @@ public class WordCount {
 			getFlatMapFunction(configuration, ttl);
 		DataStream<Long> mapper = source.keyBy(0)
 				.flatMap(flatMapFunction)
-				.setParallelism(configuration.getInteger(FLAT_MAP_PARALLELISM));
+				.setParallelism(configuration.getInteger(FLAT_MAP_PARALLELISM))
+                .slotSharingGroup(group2);
 
 		//mapper.print().setParallelism(1);
-        mapper.addSink(new BlackholeSink<>());
+        mapper.addSink(new BlackholeSink<>()).slotSharingGroup(group3);
 
 		if (jobName == null) {
 			env.execute();
