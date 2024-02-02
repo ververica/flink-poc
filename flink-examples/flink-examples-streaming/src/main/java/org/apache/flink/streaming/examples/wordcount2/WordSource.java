@@ -47,6 +47,8 @@ public class WordSource  extends RichParallelSourceFunction<Tuple2<String, Long>
 
 	private final int largest;
 
+    private long baseNumForSubTask;
+
 	private final long rate;
 
 	private transient ThrottledIterator<Integer> throttledIterator;
@@ -62,12 +64,14 @@ public class WordSource  extends RichParallelSourceFunction<Tuple2<String, Long>
 		this.wordLen = wordLen;
 		this.largest = largest;
 		this.rate = rate;
+
 	}
 
 	@Override
 	public void open(Configuration parameters) throws Exception {
 		this.isRunning = true;
 		this.emitNumber = 0;
+        this.baseNumForSubTask = ((long) getRuntimeContext().getIndexOfThisSubtask()) * largest;
 
 		Iterator<Integer> numberSourceIterator = new NumberSourceIterator(largest, System.currentTimeMillis());
 		this.throttledIterator = new ThrottledIterator<>(numberSourceIterator, rate);
@@ -78,8 +82,8 @@ public class WordSource  extends RichParallelSourceFunction<Tuple2<String, Long>
 			fatArray[i] = (char) random.nextInt();
 		}
 
-		LOG.info("maxCount {}, largest {}, wordLen {}, rate {}, fatArray {}",
-				maxCount, largest, wordLen, rate, Arrays.hashCode(fatArray));
+		LOG.info("maxCount {}, largest {}, baseNumForSubTask {}, wordLen {}, rate {}, fatArray {}",
+				maxCount, largest, baseNumForSubTask, wordLen, rate, Arrays.hashCode(fatArray));
 	}
 
 	@Override
@@ -92,7 +96,7 @@ public class WordSource  extends RichParallelSourceFunction<Tuple2<String, Long>
 				} else {
 					number = throttledIterator.next();
 				}
-				sourceContext.collect(Tuple2.of(covertToString(number), System.currentTimeMillis()));
+				sourceContext.collect(Tuple2.of(covertToString(baseNumForSubTask + number), System.currentTimeMillis()));
 			} else {
 				isRunning = false;
 				break;
@@ -114,7 +118,7 @@ public class WordSource  extends RichParallelSourceFunction<Tuple2<String, Long>
 		return getSource(env, rate, largest, wordLen, -1);
 	}
 
-	private String covertToString(int number) {
+	private String covertToString(long number) {
 		String a = String.valueOf(number);
 		StringBuilder builder = new StringBuilder(wordLen);
 		builder.append(a);

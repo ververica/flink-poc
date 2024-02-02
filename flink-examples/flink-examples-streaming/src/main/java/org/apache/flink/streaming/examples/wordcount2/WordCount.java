@@ -98,7 +98,7 @@ public class WordCount {
 		int wordRate = configuration.getInteger(WORD_RATE);
 
 		DataStream<Tuple2<String, Long>> source =
-				WordSource.getSource(env, wordRate, wordNumber, wordLength).setParallelism(1)
+				WordSource.getSource(env, wordRate, wordNumber, wordLength)
                         .slotSharingGroup(group1);
 
 		// configure ttl
