@@ -175,7 +175,7 @@ public class FileBasedCache implements Closeable {
         }
 
         FSDataInputStream open4Read() throws IOException {
-            if (!writing && tryRetain() > 0) {
+            if (!closed && !writing && tryRetain() > 0) {
                 if (fsDataInputStream == null) {
                     fsDataInputStream = cacheFs.open(cachePath);
                 }
@@ -185,7 +185,7 @@ public class FileBasedCache implements Closeable {
         }
 
         FSDataOutputStream open4Write() throws IOException {
-            if (writing && tryRetain() > 0) {
+            if (!closed && writing && tryRetain() > 0) {
                 if (fsDataOutputStream == null) {
                     fsDataOutputStream = cacheFs.create(cachePath, FileSystem.WriteMode.OVERWRITE);
                 }
@@ -205,9 +205,10 @@ public class FileBasedCache implements Closeable {
             if (!closed) {
                 if (capacity <= 0L) {
                     scheduleDelete(this);
+                } else {
+                    evictIfNeeded();
                 }
             }
-            evictIfNeeded();
         }
 
         public void close4Read() {
@@ -222,9 +223,10 @@ public class FileBasedCache implements Closeable {
         }
 
         // Don't remove entry from cacheMap to avoid ConcurrentModificationException
-        public void evict() {
-            if (!closed) {
+        public boolean evict() {
+            if (closed || getReferenceCount()  <= 1) {
                 closed = true;
+                decReference();
                 try {
                     if (fsDataInputStream != null) {
                         fsDataInputStream.close();
@@ -232,10 +234,12 @@ public class FileBasedCache implements Closeable {
                     }
                     cacheSize.addAndGet(-entrySize);
                     cacheFs.delete(cachePath, false);
+                    return true;
                 } catch (Exception e) {
-                    // ignore;
+                    LOG.warn("Failed to delete cache entry {}.", cachePath, e);
                 }
             }
+            return  false;
         }
 
         @Override
@@ -264,8 +268,11 @@ public class FileBasedCache implements Closeable {
                     return;
                 }
                 for (CacheEntry entry : cacheMap.values()) {
-                    toRemove.add(entry.originalPath);
-                    entry.evict();
+                    if (entry.evict()) {
+                        toRemove.add(entry.originalPath);
+                    }
+                    LOG.debug("Evict entry {}, remove size {}, cacheSize {}.",
+                            entry.cachePath, toRemove.size(), cacheSize.get());
                     if (cacheSize.get() <= capacity) {
                         break;
                     }

@@ -88,6 +88,11 @@ public abstract class ReferenceCounted {
 		return r;
 	}
 
+	public int decReference() {
+		int r = unsafe.getAndAddInt(this, referenceOffset, -1) - 1;
+		return r;
+	}
+
 	public int getReferenceCount() {
 		return referenceCount;
 	}
