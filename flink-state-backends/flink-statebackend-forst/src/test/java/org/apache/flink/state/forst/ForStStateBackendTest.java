@@ -109,7 +109,7 @@ public class ForStStateBackendTest {
     private void assertValueEquals(AsyncValueState<String> state, String expectValue) throws Exception {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         AtomicReference<Throwable> error = new AtomicReference<>();
-        state.value().then(v ->  {
+        state.value().thenAccept(v ->  {
             try {
                 assertEquals(expectValue, v);
                 countDownLatch.countDown();

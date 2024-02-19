@@ -22,13 +22,16 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.StateDescriptorBase;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.common.typeutils.TypeSerializerSnapshot;
 import org.apache.flink.api.common.typeutils.base.MapSerializer;
 import org.apache.flink.api.common.typeutils.base.MapSerializerSnapshot;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.contrib.streaming.state.async.AsyncRocksDBValueState;
 import org.apache.flink.contrib.streaming.state.iterator.RocksStateKeysAndNamespaceIterator;
 import org.apache.flink.contrib.streaming.state.iterator.RocksStateKeysIterator;
 import org.apache.flink.contrib.streaming.state.snapshot.RocksDBFullSnapshotResources;
@@ -864,6 +867,28 @@ public class RocksDBKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         TypeSerializerSchemaCompatibility<UK> keyCompatibility =
                 previousKeySerializerSnapshot.resolveSchemaCompatibility(newUserKeySerializer);
         return keyCompatibility.isCompatibleAsIs();
+    }
+
+    @Override
+    public  <N, SV, SEV, S extends AsyncState, IS extends S> IS createOrUpdateInternalState(
+            @Nonnull TypeSerializer<N> namespaceSerializer,
+            @Nonnull AsyncStateDescriptor<S, SV> stateDesc,
+            @Nonnull StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
+            boolean allowFutureMetadataUpdates)
+            throws Exception {
+        ValueStateDescriptor<SV> syncStateDesc;
+        switch (stateDesc.getType()) {
+            case VALUE:
+                syncStateDesc = new ValueStateDescriptor<SV>(stateDesc.getName(), stateDesc.getSerializer());
+                break;
+            default:
+                throw new FlinkRuntimeException("not supported");
+        }
+        RocksDBValueState<K, N, SV> syncState = createOrUpdateInternalState(
+                namespaceSerializer, syncStateDesc, snapshotTransformFactory, allowFutureMetadataUpdates);
+        @SuppressWarnings("unchecked")
+        IS asyncRocksDBValueState = (IS) new AsyncRocksDBValueState<K, N, SV>(syncState);
+        return asyncRocksDBValueState;
     }
 
     @Override

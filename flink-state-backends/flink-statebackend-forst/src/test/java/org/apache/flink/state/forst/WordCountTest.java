@@ -98,6 +98,19 @@ public class WordCountTest {
         env.execute();
     }
 
+    @Test
+    public void syncExeWordCountWithASyncAPI() throws Exception {
+        Configuration config = getCommonConfiguration();
+        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
+        FileSystem.initialize(config, null);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+        env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1);
+        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        mapper.print().setParallelism(1);
+        env.execute();
+    }
+
     public static class MixedFlatMapper extends RichFlatMapFunction<String, Long> {
 
         private transient AsyncValueState<Integer> asyncWordCounter;

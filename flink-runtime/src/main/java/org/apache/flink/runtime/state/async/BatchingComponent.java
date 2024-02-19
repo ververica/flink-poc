@@ -116,7 +116,7 @@ public class BatchingComponent<R, K> {
     public void releaseStateAccessToken(R record, K key) {
 
         R existRecord = noConflictInFlightRecords.remove(key);
-        assert existRecord == record;
+        assert (existRecord == null || existRecord == record);
         LOG.trace("remove record {} key {}", record, key);
         inFlightRecordNum.decrementAndGet();
     }

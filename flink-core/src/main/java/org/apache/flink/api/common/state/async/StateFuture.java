@@ -77,4 +77,12 @@ public interface StateFuture<T> {
      */
     <U,V> StateFuture<V> thenCombine(
             StateFuture<? extends U> other, BiFunction<? super T,? super U,? extends V> fn);
+
+    /**
+     * Waits if necessary for the computation to complete, and then
+     * retrieves its result.
+     *
+     * @return the computed result.
+     */
+    T get();
 }

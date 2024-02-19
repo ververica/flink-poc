@@ -24,6 +24,7 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -102,5 +103,14 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
     @Override
     public RecordContext<K, R> getCurrentRecordContext() {
         return currentRecord;
+    }
+
+    @Override
+    public V get() {
+        try {
+            return future.get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

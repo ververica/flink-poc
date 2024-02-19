@@ -24,6 +24,9 @@ import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
+import org.apache.flink.api.common.state.async.AsyncState;
+import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.common.typeutils.TypeSerializerSchemaCompatibility;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -46,9 +49,11 @@ import org.apache.flink.runtime.state.SnapshotResult;
 import org.apache.flink.runtime.state.SnapshotStrategy;
 import org.apache.flink.runtime.state.SnapshotStrategyRunner;
 import org.apache.flink.runtime.state.StateSnapshotRestore;
+import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StateSnapshotTransformer.StateSnapshotTransformFactory;
 import org.apache.flink.runtime.state.StateSnapshotTransformers;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
+import org.apache.flink.runtime.state.heap.async.AsyncHeapValueState;
 import org.apache.flink.runtime.state.metrics.LatencyTrackingStateConfig;
 import org.apache.flink.runtime.state.ttl.TtlTimeProvider;
 import org.apache.flink.util.FlinkRuntimeException;
@@ -301,6 +306,28 @@ public class HeapKeyedStateBackend<K> extends AbstractKeyedStateBackend<K> {
         final StateSnapshotRestore stateSnapshotRestore = registeredKVStates.get(state);
         StateTable<K, N, ?> table = (StateTable<K, N, ?>) stateSnapshotRestore;
         return table.getKeysAndNamespaces();
+    }
+
+    @Override
+    public <N, SV, SEV, AS extends AsyncState, IS extends AS> IS createOrUpdateInternalState(
+            @Nonnull TypeSerializer<N> namespaceSerializer,
+            @Nonnull AsyncStateDescriptor<AS, SV> stateDesc,
+            @Nonnull StateSnapshotTransformer.StateSnapshotTransformFactory<SEV> snapshotTransformFactory,
+            boolean allowFutureMetadataUpdates)
+            throws Exception {
+
+        ValueStateDescriptor<SV> syncStateDesc;
+        switch (stateDesc.getType()) {
+            case VALUE:
+                syncStateDesc = new ValueStateDescriptor<SV>(stateDesc.getName(), stateDesc.getSerializer());
+                break;
+            default:
+                throw new FlinkRuntimeException("not supported");
+        }
+        HeapValueState<K, N, SV> syncState = createOrUpdateInternalState(namespaceSerializer, syncStateDesc, snapshotTransformFactory, allowFutureMetadataUpdates);
+        @SuppressWarnings("unchecked")
+        IS asyncHeapValueState = (IS) new AsyncHeapValueState(syncState);
+        return asyncHeapValueState;
     }
 
     @Override
