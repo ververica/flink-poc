@@ -78,8 +78,6 @@ public class SimpleOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
                     operator);
         } else if (operator instanceof OneInputStreamOperator) {
             return BundleSimpleOperatorFactory.of((OneInputStreamOperator) operator);
-        } else if (operator instanceof TwoInputStreamOperator) {
-            return BundleTwoInputSimpleOperatorFactory.of((TwoInputStreamOperator) operator);
         } else if (operator instanceof AbstractUdfStreamOperator) {
             return new SimpleUdfStreamOperatorFactory<OUT>((AbstractUdfStreamOperator) operator);
         } else {
