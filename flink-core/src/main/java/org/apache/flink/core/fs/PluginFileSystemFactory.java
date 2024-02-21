@@ -18,11 +18,13 @@
 package org.apache.flink.core.fs;
 
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.util.Preconditions;
 import org.apache.flink.util.TemporaryClassLoaderContext;
 import org.apache.flink.util.WrappingProxy;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 /**
  * A wrapper around {@link FileSystemFactory} that ensures the plugin classloader is used for all
@@ -59,7 +61,10 @@ public class PluginFileSystemFactory implements FileSystemFactory {
     @Override
     public FileSystem create(final URI fsUri) throws IOException {
         try (TemporaryClassLoaderContext ignored = TemporaryClassLoaderContext.of(loader)) {
-            return new ClassLoaderFixingFileSystem(inner.create(fsUri), loader);
+            FileSystem innerFs = inner.create(fsUri);
+            return (innerFs instanceof DuplicatingFileSystem)
+                    ? new ClassLoaderFixingDuplicatingFileSystem(innerFs, loader)
+                    : new ClassLoaderFixingFileSystem(innerFs, loader);
         }
     }
 
@@ -195,6 +200,29 @@ public class PluginFileSystemFactory implements FileSystemFactory {
         @Override
         public FileSystem getWrappedDelegate() {
             return inner;
+        }
+    }
+
+    static class ClassLoaderFixingDuplicatingFileSystem extends ClassLoaderFixingFileSystem
+            implements WrappingProxy<FileSystem>, DuplicatingFileSystem {
+
+        private final DuplicatingFileSystem duplicatingFileSystem;
+
+        private ClassLoaderFixingDuplicatingFileSystem(FileSystem inner, ClassLoader loader) {
+            super(inner, loader);
+            Preconditions.checkArgument(inner instanceof DuplicatingFileSystem,
+                    "The inner file system need be DuplicatingFileSystem.");
+            this.duplicatingFileSystem = (DuplicatingFileSystem) inner;
+        }
+
+        @Override
+        public boolean canFastDuplicate(Path source, Path destination) throws IOException {
+            return duplicatingFileSystem.canFastDuplicate(source, destination);
+        }
+
+        @Override
+        public void duplicate(List<CopyRequest> requests) throws IOException {
+            duplicatingFileSystem.duplicate(requests);
         }
     }
 }

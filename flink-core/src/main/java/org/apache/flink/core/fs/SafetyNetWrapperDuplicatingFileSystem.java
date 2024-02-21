@@ -7,7 +7,7 @@ import java.util.List;
 
 public class SafetyNetWrapperDuplicatingFileSystem extends SafetyNetWrapperFileSystem implements DuplicatingFileSystem {
 
-    private DuplicatingFileSystem duplicatingFileSystem;
+    private final DuplicatingFileSystem duplicatingFileSystem;
 
     public SafetyNetWrapperDuplicatingFileSystem(
             FileSystem unsafeFileSystem,
