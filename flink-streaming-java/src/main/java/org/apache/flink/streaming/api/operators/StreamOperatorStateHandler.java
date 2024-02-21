@@ -68,7 +68,6 @@ import javax.annotation.Nullable;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -401,30 +400,6 @@ public class StreamOperatorStateHandler {
     public Object getCurrentKey() {
         if (keyedStateBackend != null) {
             return keyedStateBackend.getCurrentKey();
-        } else {
-            throw new UnsupportedOperationException("Key can only be retrieved on KeyedStream.");
-        }
-    }
-
-    public void setCurrentKeys(Collection<Object> key) {
-        if (keyedStateBackend != null) {
-            try {
-                // need to work around type restrictions
-                @SuppressWarnings("rawtypes")
-                CheckpointableKeyedStateBackend rawBackend = keyedStateBackend;
-
-                rawBackend.setCurrentKeys(key);
-            } catch (Exception e) {
-                throw new RuntimeException(
-                        "Exception occurred while setting the current key context.", e);
-            }
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    public Collection<Object> getCurrentKeys() {
-        if (keyedStateBackend != null) {
-            return (Collection<Object>) keyedStateBackend.getCurrentKeys();
         } else {
             throw new UnsupportedOperationException("Key can only be retrieved on KeyedStream.");
         }

@@ -63,8 +63,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -525,16 +523,6 @@ public abstract class AbstractStreamOperator<OUT>
         return stateHandler.getCurrentKey();
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public void setCurrentKeys(Collection<Object> key) {
-        stateHandler.setCurrentKeys(key);
-    }
-
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    public Collection<Object> getCurrentKeys() {
-        return stateHandler.getCurrentKeys();
-    }
-
     public <E> RecordContext<?, E> preProcessElement(E element) {
         RecordContext<?, E> recordContext = new RecordContext<>(element, getCurrentKey(), epochManager.onRecord(),
                 stateHandler.getBatchingComponent(), recordId -> {
@@ -551,10 +539,6 @@ public abstract class AbstractStreamOperator<OUT>
 
     public <E> void postProcessElement(RecordContext<?, E> recordContext) {
         recordContext.release();
-    }
-
-    public void clearCurrentKeysCache() {
-        stateHandler.clearCurrentKeysCache();;
     }
 
     public KeyedStateStore getKeyedStateStore() {

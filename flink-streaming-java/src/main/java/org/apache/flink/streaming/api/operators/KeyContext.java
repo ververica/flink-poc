@@ -18,8 +18,6 @@
 
 package org.apache.flink.streaming.api.operators;
 
-import java.util.Collection;
-
 /**
  * Interface for setting and querying the current key of keyed operations.
  *
@@ -31,8 +29,4 @@ public interface KeyContext {
     void setCurrentKey(Object key);
 
     Object getCurrentKey();
-
-    void setCurrentKeys(Collection<Object> key);
-
-    Collection<Object> getCurrentKeys();
 }

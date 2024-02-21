@@ -29,7 +29,6 @@ import org.apache.flink.runtime.state.async.AsyncKeyedStateFactory;
 import org.apache.flink.runtime.state.async.RecordContext;
 import org.apache.flink.util.Disposable;
 
-import java.util.Collection;
 import java.util.stream.Stream;
 
 /**
@@ -52,14 +51,6 @@ public interface KeyedStateBackend<K>
 
     default boolean isSupportAsync() {
         return false;
-    }
-
-    default void setCurrentKeys(Collection<K> key) {
-        throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
-    }
-
-    default Collection<K> getCurrentKeys() {
-        throw new UnsupportedOperationException("Don't support getCurrentKeys yet");
     }
 
     default void clearCurrentKeysCache() {
