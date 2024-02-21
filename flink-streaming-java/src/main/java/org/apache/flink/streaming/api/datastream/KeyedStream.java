@@ -48,8 +48,6 @@ import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.graph.StreamGraphGenerator;
 import org.apache.flink.streaming.api.operators.KeyedProcessOperator;
 import org.apache.flink.streaming.api.operators.LegacyKeyedProcessOperator;
-import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
-import org.apache.flink.streaming.api.operators.SimpleOperatorFactory;
 import org.apache.flink.streaming.api.operators.StreamOperatorFactory;
 import org.apache.flink.streaming.api.operators.co.IntervalJoinOperator;
 import org.apache.flink.streaming.api.transformations.OneInputTransformation;
@@ -280,16 +278,6 @@ public class KeyedStream<T, KEY> extends DataStream<T> {
     // ------------------------------------------------------------------------
     //  basic transformations
     // ------------------------------------------------------------------------
-
-//    @Override
-//    public <R> SingleOutputStreamOperator<R> transform(
-//            String operatorName,
-//            TypeInformation<R> outTypeInfo,
-//            OneInputStreamOperator<T, R> operator) {
-//
-//        return doTransform(operatorName, outTypeInfo, SimpleOperatorFactory.ofKeyed(operator));
-//    }
-
     @Override
     protected <R> SingleOutputStreamOperator<R> doTransform(
             final String operatorName,
