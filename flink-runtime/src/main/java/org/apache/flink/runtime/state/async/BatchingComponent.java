@@ -66,7 +66,7 @@ public class BatchingComponent<R, K> {
             batchingStateRequests.offer(request);
         }
 
-        if (batchingStateRequests.size() > batchSize) {
+        if (batchingStateRequests.size() >= batchSize) {
             fireOneBatch();
         }
     }

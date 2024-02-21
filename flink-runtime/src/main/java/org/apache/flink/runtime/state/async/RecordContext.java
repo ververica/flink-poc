@@ -1,6 +1,8 @@
 package org.apache.flink.runtime.state.async;
 
 
+import org.apache.flink.annotation.VisibleForTesting;
+
 import java.util.function.Consumer;
 
 public class RecordContext<K, R> extends ReferenceCounted {
@@ -16,6 +18,16 @@ public class RecordContext<K, R> extends ReferenceCounted {
     private final BatchingComponent<R, K> batchingComponentHandle;
 
     private final Consumer<Long> recordCallback;
+
+    @VisibleForTesting
+    public RecordContext(R record, K key, BatchingComponent<R, K> batchingComponent) {
+        super(0);
+        this.record = record;
+        this.key = key;
+        this.heldStateAccessToken = false;
+        this.batchingComponentHandle = batchingComponent;
+        this.recordCallback = ignore -> {};
+    }
 
     public RecordContext(R record, K key, long recordId, BatchingComponent<R, K> batchingComponentHandle, Consumer<Long> recordCallback) {
         super(0);

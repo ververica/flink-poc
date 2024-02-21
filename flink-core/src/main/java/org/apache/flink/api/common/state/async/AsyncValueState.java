@@ -29,8 +29,8 @@ import java.io.IOException;
 @PublicEvolving
 public interface AsyncValueState<T> extends AsyncState {
 
-    StateFuture<T> value();
+    StateFuture<T> value() throws StateUncheckedIOException;
 
-    StateFuture<Void> update(T value);
+    StateFuture<Void> update(T value) throws StateUncheckedIOException;
 
 }

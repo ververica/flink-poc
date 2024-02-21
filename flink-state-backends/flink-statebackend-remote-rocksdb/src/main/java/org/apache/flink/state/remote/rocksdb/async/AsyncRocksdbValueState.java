@@ -39,7 +39,7 @@ public class AsyncRocksdbValueState<R, K, N, V>
     }
 
     @Override
-    public StateFuture<V> value() {
+    public StateFuture<V> value() throws StateUncheckedIOException {
         StateFutureImpl<R, K, V> future = batchingComponent.newStateFuture(
                 keyContext.getCurrentKey(), keyContext.getCurrentRecordContext(), keyContext);
         StateRequest<RemoteRocksdbValueState<K, N, V>, K, Void, V> valueGet =
@@ -53,7 +53,7 @@ public class AsyncRocksdbValueState<R, K, N, V>
     }
 
     @Override
-    public StateFuture<Void> update(V value) {
+    public StateFuture<Void> update(V value) throws StateUncheckedIOException {
         StateFutureImpl<R, K, Void> future = batchingComponent.newStateFuture(
                 keyContext.getCurrentKey(), keyContext.getCurrentRecordContext(), keyContext);
         StateRequest<RemoteRocksdbValueState<K, N, V>, K, V, Void> valuePut =
