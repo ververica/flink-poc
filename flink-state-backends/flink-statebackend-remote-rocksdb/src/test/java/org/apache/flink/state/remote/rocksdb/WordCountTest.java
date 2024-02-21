@@ -109,7 +109,6 @@ public class WordCountTest {
     public void testSingleWordCount() throws Exception {
         Configuration configuration = getCommonConfiguration();
         configuration.set(ExecutionOptions.BUNDLE_OPERATOR_BATCH_ENABLED, false);
-        configuration.set(RemoteRocksDBOptions.REMOTE_ROCKSDB_ENABLE_CACHE_LAYER, false);
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
         DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);

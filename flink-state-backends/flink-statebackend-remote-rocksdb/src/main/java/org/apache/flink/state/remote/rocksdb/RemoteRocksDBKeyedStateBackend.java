@@ -94,7 +94,6 @@ public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBacke
     public RemoteRocksDBKeyedStateBackend(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
-            boolean enableCacheLayer,
             int ioParallelism,
             ClassLoader userCodeClassLoader,
             File instanceBasePath,
@@ -154,8 +153,8 @@ public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBacke
         this.stateExecutorService = new StateExecutorService<>(ioParallelism);
         this.batchingComponent = batchingComponent;
         batchingComponent.setStateExecutor(stateExecutorService);
-        LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, enableCacheLayer {}, ioParallelism {}",
-                remoteRocksDBMode, workingDir, enableCacheLayer, ioParallelism);
+        LOG.info("Create RemoteRocksDBKeyedStateBackend: remoteRocksDBMode {}, workingDir {}, ioParallelism {}",
+                remoteRocksDBMode, workingDir, ioParallelism);
     }
     
     public RocksDB getDB() {

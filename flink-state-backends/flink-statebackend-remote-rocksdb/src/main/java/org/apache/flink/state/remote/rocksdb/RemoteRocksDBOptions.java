@@ -40,12 +40,6 @@ public class RemoteRocksDBOptions {
                     .noDefaultValue()
                     .withDescription("");
 
-    public static final ConfigOption<Boolean> REMOTE_ROCKSDB_ENABLE_CACHE_LAYER =
-            ConfigOptions.key("state.backend.remote-rocksdb.cache-layer.enabled")
-                    .booleanType()
-                    .defaultValue(true)
-                    .withDescription("");
-
     public static final ConfigOption<Integer> REMOTE_ROCKSDB_IO_PARALLELISM =
             ConfigOptions.key("state.backend.remote-rocksdb.io.parallelism")
                     .intType()

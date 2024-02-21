@@ -100,8 +100,6 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
 
     private String workingDir;
 
-    private final boolean enableCacheLayer;
-
     private final int ioParallelism;
 
     private final BatchingComponent<?, K> batchingComponent;
@@ -109,7 +107,6 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
     public RemoteRocksDBKeyedStateBackendBuilder(
             RemoteRocksDBMode remoteRocksDBMode,
             String workingDir,
-            boolean enableCacheLayer,
             int ioParallelism,
             String operatorIdentifier,
             ClassLoader userCodeClassLoader,
@@ -151,7 +148,6 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
                 cancelStreamRegistry);
         this.remoteRocksDBMode = remoteRocksDBMode;
         this.workingDir = workingDir;
-        this.enableCacheLayer = enableCacheLayer;
         this.ioParallelism = ioParallelism;
         this.batchingComponent = batchingComponent;
     }
@@ -282,7 +278,6 @@ public class RemoteRocksDBKeyedStateBackendBuilder<K> extends RocksDBKeyedStateB
         return new RemoteRocksDBKeyedStateBackend<>(
                 this.remoteRocksDBMode,
                 this.workingDir,
-                this.enableCacheLayer,
                 this.ioParallelism,
                 this.userCodeClassLoader,
                 this.instanceBasePath,
