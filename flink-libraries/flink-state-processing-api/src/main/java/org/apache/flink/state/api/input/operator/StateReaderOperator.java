@@ -37,7 +37,6 @@ import org.apache.flink.util.Collector;
 import org.apache.flink.util.Preconditions;
 
 import java.io.Serializable;
-import java.util.Collection;
 
 /**
  * Base class for executing functions that read keyed state.
@@ -136,17 +135,6 @@ public abstract class StateReaderOperator<F extends Function, KEY, N, OUT>
     @Override
     public final Object getCurrentKey() {
         return keyedStateBackend.getCurrentKey();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final void setCurrentKeys(Collection<?> keys) {
-        keyedStateBackend.setCurrentKeys((Collection<KEY>) keys);
-    }
-
-    @Override
-    public final Collection<?> getCurrentKeys() {
-        return keyedStateBackend.getCurrentKeys();
     }
 
     public final KeyedStateBackend<KEY> getKeyedStateBackend() {

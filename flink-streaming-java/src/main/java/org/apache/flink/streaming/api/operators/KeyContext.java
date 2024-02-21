@@ -18,8 +18,6 @@
 
 package org.apache.flink.streaming.api.operators;
 
-import org.apache.flink.runtime.state.async.RecordContext;
-
 import java.util.Collection;
 
 /**
@@ -34,15 +32,7 @@ public interface KeyContext {
 
     Object getCurrentKey();
 
-    default void setCurrentKeys(Collection<?> keys) {
-        throw new UnsupportedOperationException("not implemented");
-    }
+    void setCurrentKeys(Collection<Object> key);
 
-    default Collection<?> getCurrentKeys() {
-        throw new UnsupportedOperationException("not implemented");
-    }
-
-    default void clearCurrentKeysCache() {
-        throw new UnsupportedOperationException("not implemented");
-    }
+    Collection<Object> getCurrentKeys();
 }

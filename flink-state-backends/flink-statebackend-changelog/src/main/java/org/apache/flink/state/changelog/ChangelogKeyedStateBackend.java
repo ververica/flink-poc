@@ -287,16 +287,6 @@ public class ChangelogKeyedStateBackend<K>
     }
 
     @Override
-    public void setCurrentKeys(Collection<K> newKey) {
-        keyedStateBackend.setCurrentKeys(newKey);
-    }
-
-    @Override
-    public Collection<K> getCurrentKeys() {
-        return keyedStateBackend.getCurrentKeys();
-    }
-
-    @Override
     public TypeSerializer<K> getKeySerializer() {
         return keyedStateBackend.getKeySerializer();
     }

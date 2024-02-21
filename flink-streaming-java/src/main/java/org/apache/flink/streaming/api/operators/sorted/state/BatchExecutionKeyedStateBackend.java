@@ -47,7 +47,6 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,18 +123,6 @@ public class BatchExecutionKeyedStateBackend<K> implements CheckpointableKeyedSt
     @Override
     public K getCurrentKey() {
         return currentKey;
-    }
-
-    @Override
-    public void setCurrentKeys(Collection<K> newKey) {
-        throw new UnsupportedOperationException(
-                "Currently we do not implement batch interface of state.");
-    }
-
-    @Override
-    public Collection<K> getCurrentKeys() {
-        throw new UnsupportedOperationException(
-                "Currently we do not implement batch interface of state.");
     }
 
     @Override

@@ -421,12 +421,12 @@ public abstract class AbstractStreamOperatorV2<OUT>
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public void setCurrentKeys(Collection<?> keys) {
-        stateHandler.setCurrentKeys(keys);
+    public void setCurrentKeys(Collection<Object> key) {
+        stateHandler.setCurrentKeys(key);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public Collection<?> getCurrentKeys() {
+    public Collection<Object> getCurrentKeys() {
         return stateHandler.getCurrentKeys();
     }
 

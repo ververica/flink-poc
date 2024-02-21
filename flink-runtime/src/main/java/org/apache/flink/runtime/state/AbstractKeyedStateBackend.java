@@ -45,7 +45,6 @@ import javax.annotation.Nonnull;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.Stream;
 
@@ -560,20 +559,5 @@ public abstract class AbstractKeyedStateBackend<K>
     @Override
     public void setCurrentKeyGroupIndex(int currentKeyGroupIndex) {
         keyContext.setCurrentKeyGroupIndex(currentKeyGroupIndex);
-    }
-
-    @Override
-    public void setCurrentKeys(Collection<K> newKey) {
-        this.keyContext.setCurrentKeys(newKey);
-    }
-
-    @Override
-    public Collection<K> getCurrentKeys() {
-        return this.keyContext.getCurrentKeys();
-    }
-
-    @Override
-    public void clearCurrentKeysCache() {
-        clearCurrentKeysCacheListeners.forEach(ClearCurrentKeysCacheListener::notifyClearCache);
     }
 }

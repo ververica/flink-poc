@@ -25,8 +25,6 @@ import org.apache.flink.runtime.state.async.RecordContext;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
-import java.util.Collection;
-
 /**
  * The default {@link InternalKeyContext} implementation.
  *
@@ -43,12 +41,15 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     /** The key group of the currently active key. */
     private int currentKeyGroupIndex;
 
+<<<<<<< HEAD
     private Collection<K> currentKeys;
 
     private boolean inCallBackProcess;
 
     private RecordContext recordContext;
 
+=======
+>>>>>>> parent of 401e8c6303... Batch wrapper for reduce operator
     public InternalKeyContextImpl(
             @Nonnull KeyGroupRange keyGroupRange, @Nonnegative int numberOfKeyGroups) {
         this.keyGroupRange = keyGroupRange;
@@ -99,16 +100,6 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
                     currentKeyGroupIndex, keyGroupRange);
         }
         this.currentKeyGroupIndex = currentKeyGroupIndex;
-    }
-
-    @Override
-    public Collection<K> getCurrentKeys() {
-        return currentKeys;
-    }
-
-    @Override
-    public void setCurrentKeys(Collection<K> keys) {
-        currentKeys = keys;
     }
 
     public <R> void setCurrentRecordContext(RecordContext<K, R> recordContext) {
