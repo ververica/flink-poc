@@ -41,15 +41,8 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     /** The key group of the currently active key. */
     private int currentKeyGroupIndex;
 
-<<<<<<< HEAD
-    private Collection<K> currentKeys;
-
-    private boolean inCallBackProcess;
-
     private RecordContext recordContext;
 
-=======
->>>>>>> parent of 401e8c6303... Batch wrapper for reduce operator
     public InternalKeyContextImpl(
             @Nonnull KeyGroupRange keyGroupRange, @Nonnegative int numberOfKeyGroups) {
         this.keyGroupRange = keyGroupRange;
@@ -79,18 +72,11 @@ public class InternalKeyContextImpl<K> implements InternalKeyContext<K> {
     @Override
     public void setCurrentKey(@Nonnull K currentKey) {
         this.currentKey = currentKey;
-        this.inCallBackProcess = false;
     }
 
     @Override
     public void setCurrentKey(@Nonnull K currentKey, boolean invokeByCallBack) {
         setCurrentKey(currentKey);
-        this.inCallBackProcess = invokeByCallBack;
-    }
-
-    @Override
-    public boolean isInCallBackProcess() {
-        return inCallBackProcess;
     }
 
     @Override

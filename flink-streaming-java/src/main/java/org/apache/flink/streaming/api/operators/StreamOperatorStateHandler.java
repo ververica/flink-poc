@@ -405,12 +405,6 @@ public class StreamOperatorStateHandler {
         }
     }
 
-    public void clearCurrentKeysCache() {
-        if (keyedStateBackend != null) {
-            keyedStateBackend.clearCurrentKeysCache();
-        }
-    }
-
     public <R> void setCurrentRecordContext(RecordContext<?, R> recordContext) {
         if (keyedStateBackend != null) {
             @SuppressWarnings("rawtypes")

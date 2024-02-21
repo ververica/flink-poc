@@ -166,11 +166,6 @@ public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBacke
         setKeyContext(newKey);
     }
 
-    @Override
-    public boolean isSupportAsync() {
-        return true;
-    }
-
     public StateExecutorService<K> getStateExecutorService() {
         return stateExecutorService;
     }

@@ -49,14 +49,6 @@ public interface KeyedStateBackend<K>
     /** @return Current key. */
     K getCurrentKey();
 
-    default boolean isSupportAsync() {
-        return false;
-    }
-
-    default void clearCurrentKeysCache() {
-        throw new UnsupportedOperationException("Don't support setCurrentKeys yet");
-    }
-
     default <R> void setCurrentRecordContext(RecordContext<K, R> recordContext) {
         throw new UnsupportedOperationException();
     }
@@ -183,10 +175,6 @@ public interface KeyedStateBackend<K>
      */
     boolean deregisterKeySelectionListener(KeySelectionListener<K> listener);
 
-    default void registerCurrentKeysChangedListener(ClearCurrentKeysCacheListener listener) {
-        throw new UnsupportedOperationException();
-    }
-
     @Deprecated
     default boolean isStateImmutableInStateBackend(CheckpointType checkpointOptions) {
         return false;
@@ -211,11 +199,5 @@ public interface KeyedStateBackend<K>
     interface KeySelectionListener<K> {
         /** Callback when key context is switched. */
         void keySelected(K newKey);
-    }
-
-    @FunctionalInterface
-    interface ClearCurrentKeysCacheListener {
-        /** Callback when key context is switched. */
-        void notifyClearCache();
     }
 }

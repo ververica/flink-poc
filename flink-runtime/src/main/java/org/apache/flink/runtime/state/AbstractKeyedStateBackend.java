@@ -68,8 +68,6 @@ public abstract class AbstractKeyedStateBackend<K>
     /** Listeners to changes of ({@link #keyContext}). */
     private final ArrayList<KeySelectionListener<K>> keySelectionListeners;
 
-    private final ArrayList<ClearCurrentKeysCacheListener> clearCurrentKeysCacheListeners = new ArrayList<>();
-
     /** So that we can give out state when the user uses the same key. */
     private final HashMap<String, InternalKvState<K, ?, ?>> keyValueStatesByName;
 
@@ -287,11 +285,6 @@ public abstract class AbstractKeyedStateBackend<K>
         return this.keyContext.getCurrentRecordContext();
     }
 
-    @Override
-    public boolean isInCallBackProcess() {
-        return keyContext.isInCallBackProcess();
-    }
-
     private void notifyKeySelected(K newKey) {
         // we prefer a for-loop over other iteration schemes for performance reasons here.
         for (int i = 0; i < keySelectionListeners.size(); ++i) {
@@ -307,11 +300,6 @@ public abstract class AbstractKeyedStateBackend<K>
     @Override
     public boolean deregisterKeySelectionListener(KeySelectionListener<K> listener) {
         return keySelectionListeners.remove(listener);
-    }
-
-    @Override
-    public void registerCurrentKeysChangedListener(ClearCurrentKeysCacheListener listener) {
-        clearCurrentKeysCacheListeners.add(listener);
     }
 
     /** @see KeyedStateBackend */
