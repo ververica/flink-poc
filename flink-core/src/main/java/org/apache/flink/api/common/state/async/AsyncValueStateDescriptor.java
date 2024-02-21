@@ -19,7 +19,6 @@
 package org.apache.flink.api.common.state.async;
 
 import org.apache.flink.annotation.PublicEvolving;
-import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 
 /**

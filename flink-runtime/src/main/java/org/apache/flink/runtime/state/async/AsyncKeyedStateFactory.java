@@ -18,13 +18,10 @@
 
 package org.apache.flink.runtime.state.async;
 
-import org.apache.flink.api.common.state.State;
-import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncState;
 import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.runtime.state.StateSnapshotTransformer.StateSnapshotTransformFactory;
-import org.apache.flink.runtime.state.internal.InternalKvState;
 
 import javax.annotation.Nonnull;
 
@@ -32,7 +29,7 @@ import javax.annotation.Nonnull;
 public interface AsyncKeyedStateFactory {
 
     /**
-     * Creates or updates internal state and returns a new {@link InternalKvState}.
+     * Creates or updates internal state and returns a new {@link AsyncState}.
      *
      * @param namespaceSerializer TypeSerializer for the state namespace.
      * @param stateDesc The {@code StateDescriptor} that contains the name of the state.

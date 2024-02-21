@@ -24,12 +24,27 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * The Future used async state interface.
+ * The Future used for async state interface.
  */
 @PublicEvolving
 public interface StateFuture<T> {
 
+    /**
+     * Returns a new StateFuture that, when this future completes normally, is executed with
+     * this future's result as the argument to the supplied function.
+     *
+     * @param action the function to use to compute the value of the returned StateFuture
+     * @param <C> the function's return type
+     * @return the new StateFuture
+     */
     <C> StateFuture<C> then(Function<? super T, ? extends C> action);
 
+    /**
+     * Returns a new StateFuture that, when this future completes normally, is executed with this
+     * future's result as the argument to the supplied action.
+     *
+     * @param action the action to perform before completing the returned StateFuture.
+     * @return the new StateFuture
+     */
     StateFuture<Void> then(Consumer<? super T> action);
 }

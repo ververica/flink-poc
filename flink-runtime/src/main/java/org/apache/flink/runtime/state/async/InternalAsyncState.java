@@ -18,9 +18,11 @@
 
 package org.apache.flink.runtime.state.async;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.state.async.AsyncState;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 
+@Internal
 public interface InternalAsyncState<K, N, V> extends AsyncState {
 
     /** Returns the {@link TypeSerializer} for the type of key this state is associated to. */

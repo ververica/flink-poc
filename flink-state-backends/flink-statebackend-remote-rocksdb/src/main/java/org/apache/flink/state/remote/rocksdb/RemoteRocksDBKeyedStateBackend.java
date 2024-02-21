@@ -18,12 +18,9 @@
 package org.apache.flink.state.remote.rocksdb;
 
 import org.apache.flink.api.common.ExecutionConfig;
-import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.state.async.AsyncState;
 import org.apache.flink.api.common.state.async.AsyncStateDescriptor;
-import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.contrib.streaming.state.RocksDBKeyedStateBackend;
@@ -41,7 +38,6 @@ import org.apache.flink.runtime.state.PriorityQueueSetFactory;
 import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.SerializedCompositeKeyBuilder;
 import org.apache.flink.runtime.state.SnapshotResult;
-import org.apache.flink.runtime.state.SnapshotStrategyRunner;
 import org.apache.flink.runtime.state.StateSnapshotTransformer;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
 import org.apache.flink.runtime.state.async.BatchingComponent;
@@ -53,7 +49,6 @@ import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.RemoteRocksDBM
 import org.apache.flink.state.remote.rocksdb.async.AsyncRocksdbValueState;
 import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.ResourceGuard;
-import org.apache.flink.util.function.RunnableWithException;
 
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
@@ -64,19 +59,13 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RunnableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static org.apache.flink.runtime.state.SnapshotExecutionType.ASYNCHRONOUS;
 
 public class RemoteRocksDBKeyedStateBackend<R, K> extends RocksDBKeyedStateBackend<K> {
 

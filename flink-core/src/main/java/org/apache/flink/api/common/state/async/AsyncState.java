@@ -23,5 +23,6 @@ package org.apache.flink.api.common.state.async;
  */
 public interface AsyncState {
 
+    /** Removes the value mapped under the current key. */
     StateFuture<Void> clear();
 }

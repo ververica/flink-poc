@@ -18,13 +18,12 @@
 
 package org.apache.flink.api.common.state.async;
 
-import org.apache.flink.annotation.Public;
 import org.apache.flink.annotation.PublicEvolving;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 
-@Public
+@PublicEvolving
 public class StateUncheckedIOException extends UncheckedIOException {
 
     public StateUncheckedIOException(IOException cause) {
