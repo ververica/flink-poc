@@ -438,7 +438,6 @@ public abstract class AbstractStreamOperator<OUT>
 
     @VisibleForTesting
     public OperatorStateBackend getOperatorStateBackend() {
-        runtimeContext.getExecutionConfig().getBundleOperatorBatchSize();
         return stateHandler.getOperatorStateBackend();
     }
 
