@@ -166,14 +166,6 @@ public class ExecutionOptions {
 
     @Documentation.ExcludeFromDocumentation(
             "This is an expert option, that we do not want to expose in the documentation")
-    public static final ConfigOption<Boolean> BUNDLE_OPERATOR_BATCH_ENABLED =
-            ConfigOptions.key("execution.bundle.operator.batch.enabled")
-                    .booleanType()
-                    .defaultValue(true)
-                    .withDescription("Whether to let bundle operator enable batch processing");
-
-    @Documentation.ExcludeFromDocumentation(
-            "This is an expert option, that we do not want to expose in the documentation")
     public static final ConfigOption<Integer> BUNDLE_OPERATOR_BATCH_SIZE =
             ConfigOptions.key("execution.bundle.operator.batch.size")
                     .intType()

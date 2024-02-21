@@ -45,8 +45,6 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
 
     OneInputStreamOperator<IN, OUT> wrapped;
 
-    private transient boolean isBatchEnabled;
-
     private transient BatchingContext batchingContext;
 
     public BundleStreamOperatorWrapper(OneInputStreamOperator<IN, OUT> wrapped) {
@@ -65,12 +63,8 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
 
     @Override
     public void processElement(StreamRecord<IN> element) throws Exception {
-        if (isBatchEnabled) {
-            if (batchingContext.insertIntoBatch(element)) {
-                finishBundle();
-            }
-        } else {
-            wrapped.processElement(element);
+        if (batchingContext.insertIntoBatch(element)) {
+            finishBundle();
         }
     }
 
@@ -88,9 +82,7 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
 
     @Override
     public void processWatermark(Watermark mark) throws Exception {
-        if (isBatchEnabled) {
-            finishBundle();
-        }
+        finishBundle();
         wrapped.processWatermark(mark);
     }
 
@@ -131,21 +123,15 @@ public class BundleStreamOperatorWrapper<IN, OUT> implements OneInputStreamOpera
 
     @Override
     public void open() throws Exception {
-        isBatchEnabled = getExecutionConfig().isBundleOperatorBatchEnabled();
         int batchSize = getExecutionConfig().getBundleOperatorBatchSize();
-        if (isBatchEnabled) {
-            batchingContext = new BatchingContext(batchSize);
-        }
+        batchingContext = new BatchingContext(batchSize);
         wrapped.open();
-        LOG.info("Open BundleStreamOperatorWrapper with batch enabled {}, batch size {}",
-                isBatchEnabled, batchSize);
+        LOG.info("Open BundleStreamOperatorWrapper with batch size {}", batchSize);
     }
 
     @Override
     public void finish() throws Exception {
-        if (isBatchEnabled) {
-            finishBundle();
-        }
+        finishBundle();
         wrapped.finish();
     }
 

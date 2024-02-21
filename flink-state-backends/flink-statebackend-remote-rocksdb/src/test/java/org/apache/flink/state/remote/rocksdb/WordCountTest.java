@@ -6,7 +6,6 @@ import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.ExecutionOptions;
 import org.apache.flink.configuration.MemorySize;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.configuration.TaskManagerOptions;
@@ -100,17 +99,6 @@ public class WordCountTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
         env.enableCheckpointing(500);
         DataStream<String> source = WordSource.getSource(env, 100, 50, 50).setParallelism(1);
-        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
-        mapper.print().setParallelism(1);
-        env.execute();
-    }
-
-    @Test
-    public void testSingleWordCount() throws Exception {
-        Configuration configuration = getCommonConfiguration();
-        configuration.set(ExecutionOptions.BUNDLE_OPERATOR_BATCH_ENABLED, false);
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
-        DataStream<String> source = WordSource.getSource(env, 1000, 10000, 50).setParallelism(1);
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
