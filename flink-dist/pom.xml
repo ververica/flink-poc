@@ -125,7 +125,7 @@ under the License.
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-statebackend-remote-rocksdb</artifactId>
+			<artifactId>flink-statebackend-forst</artifactId>
 			<version>${project.version}</version>
 			<optional>${flink.markBundledAsOptional}</optional>
 		</dependency>

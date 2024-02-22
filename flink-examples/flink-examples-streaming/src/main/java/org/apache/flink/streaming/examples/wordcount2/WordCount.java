@@ -40,7 +40,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions;
+import org.apache.flink.state.forst.ForStOptions;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -50,8 +50,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_MODE;
-import static org.apache.flink.state.remote.rocksdb.RemoteRocksDBOptions.REMOTE_ROCKSDB_WORKING_DIR;
+import static org.apache.flink.state.forst.ForStOptions.FOR_ST_MODE;
+import static org.apache.flink.state.forst.ForStOptions.FOR_ST_WORKING_DIR;
 import static org.apache.flink.streaming.examples.wordcount2.JobConfig.FLAT_MAP_PARALLELISM;
 import static org.apache.flink.streaming.examples.wordcount2.JobConfig.JOB_NAME;
 import static org.apache.flink.streaming.examples.wordcount2.JobConfig.SHARING_GROUP;
@@ -126,8 +126,8 @@ public class WordCount {
                 "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
 //        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.REMOTE);
 //        config.set(REMOTE_ROCKSDB_WORKING_DIR, "hdfs://localhost:9000");
-        config.set(REMOTE_ROCKSDB_MODE, RemoteRocksDBOptions.RemoteRocksDBMode.LOCAL);
-        config.set(REMOTE_ROCKSDB_WORKING_DIR, "/tmp");
+        config.set(FOR_ST_MODE, ForStOptions.ForStMode.LOCAL);
+        config.set(FOR_ST_WORKING_DIR, "/tmp");
     }
 
 	private static FlatMapFunction<Tuple2<String, Long>, Long> getFlatMapFunction(Configuration configuration, long ttl) {
