@@ -26,8 +26,8 @@ import org.apache.flink.annotation.PublicEvolving;
 @PublicEvolving
 public interface AsyncValueState<T> extends AsyncState {
 
-    StateFuture<T> value() throws StateUncheckedIOException;
+    StateFuture<T> value();
 
-    StateFuture<Void> update(T value) throws StateUncheckedIOException;
+    StateFuture<Void> update(T value);
 
 }

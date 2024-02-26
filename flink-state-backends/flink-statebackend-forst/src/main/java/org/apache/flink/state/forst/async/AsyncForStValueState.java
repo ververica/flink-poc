@@ -56,7 +56,7 @@ public class AsyncForStValueState<R, K, N, V>
     }
 
     @Override
-    public StateFuture<V> value() throws StateUncheckedIOException {
+    public StateFuture<V> value() {
         StateFutureImpl<R, K, V> future = batchingComponent.newStateFuture(
                 keyContext.getCurrentKey(), keyContext.getCurrentRecordContext(), keyContext);
         StateRequest<ForStValueState<K, N, V>, K, Void, V> valueGet =
@@ -70,7 +70,7 @@ public class AsyncForStValueState<R, K, N, V>
     }
 
     @Override
-    public StateFuture<Void> update(V value) throws StateUncheckedIOException {
+    public StateFuture<Void> update(V value) {
         StateFutureImpl<R, K, Void> future = batchingComponent.newStateFuture(
                 keyContext.getCurrentKey(), keyContext.getCurrentRecordContext(), keyContext);
         StateRequest<ForStValueState<K, N, V>, K, V, Void> valuePut =
