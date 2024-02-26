@@ -62,9 +62,9 @@ under the License.
 		</dependency>
 
 		<dependency>
-			<groupId>org.rocksdb</groupId>
-			<artifactId>rocksdbjni</artifactId>
-			<version>8.5.3-remote-rc5-SNAPSHOT</version>
+			<groupId>com.ververica</groupId>
+			<artifactId>forstjni</artifactId>
+			<version>8.5.3-poc-SNAPSHOT</version>
 		</dependency>
 
 		<dependency>
