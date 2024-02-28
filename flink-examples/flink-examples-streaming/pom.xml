@@ -257,7 +257,7 @@ under the License.
 
 							<archive>
 								<manifestEntries>
-									<program-class>org.apache.flink.streaming.examples.wordcount2.WordCount</program-class>
+									<program-class>org.apache.flink.streaming.examples.wordcountasync.WordCount</program-class>
 								</manifestEntries>
 							</archive>
 

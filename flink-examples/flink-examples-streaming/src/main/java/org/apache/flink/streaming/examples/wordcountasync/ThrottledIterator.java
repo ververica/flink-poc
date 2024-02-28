@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.flink.streaming.examples.wordcount2;
+package org.apache.flink.streaming.examples.wordcountasync;
 
 import java.io.Serializable;
 import java.util.Iterator;

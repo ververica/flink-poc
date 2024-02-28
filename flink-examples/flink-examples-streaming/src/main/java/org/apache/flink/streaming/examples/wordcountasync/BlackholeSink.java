@@ -19,40 +19,26 @@
  *
  */
 
-package org.apache.flink.streaming.examples.wordcount2;
+package org.apache.flink.streaming.examples.wordcountasync;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 
-
 /**
  * Sink to statistic latency.
  */
-public class LatencySink extends RichSinkFunction<Long> {
+public class BlackholeSink<T> extends RichSinkFunction<T> {
 
 	private static final long serialVersionUID = 1L;
 
-	/**
-	 * Window size of histogram with second unit.
-	 */
-	private final int windowSize;
-
-//	private transient Histogram latencyHist;
-
-	public LatencySink(int windowSize) {
-		this.windowSize = windowSize;
+	public BlackholeSink() {
 	}
 
 	@Override
-	public void invoke(Long value) {
-//		latencyHist.update(System.currentTimeMillis() - value);
+	public void invoke(T value) {
 	}
 
 	@Override
 	public void open(Configuration config) {
-//		this.latencyHist = getRuntimeContext()
-//				.getMetricGroup()
-//				.addGroup("WordCount")
-//				.histogram("latency", new SimpleHistogram(windowSize));
 	}
 }

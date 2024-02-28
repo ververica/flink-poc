@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.flink.streaming.examples.wordcount2;
+package org.apache.flink.streaming.examples.wordcountasync;
 
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.ConfigOption;

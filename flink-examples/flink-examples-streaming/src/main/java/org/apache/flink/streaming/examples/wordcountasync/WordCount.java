@@ -19,7 +19,7 @@
  *
  */
 
-package org.apache.flink.streaming.examples.wordcount2;
+package org.apache.flink.streaming.examples.wordcountasync;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
@@ -52,17 +52,17 @@ import java.io.IOException;
 
 import static org.apache.flink.state.forst.ForStOptions.FOR_ST_MODE;
 import static org.apache.flink.state.forst.ForStOptions.FOR_ST_WORKING_DIR;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.FLAT_MAP_PARALLELISM;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.JOB_NAME;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.SHARING_GROUP;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.STATE_MODE;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.TTL;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.WORD_LENGTH;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.WORD_NUMBER;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.WORD_RATE;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.configureCheckpoint;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.getConfiguration;
-import static org.apache.flink.streaming.examples.wordcount2.JobConfig.setStateBackend;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.FLAT_MAP_PARALLELISM;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.JOB_NAME;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.SHARING_GROUP;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.STATE_MODE;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.TTL;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.WORD_LENGTH;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.WORD_NUMBER;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.WORD_RATE;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.configureCheckpoint;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.getConfiguration;
+import static org.apache.flink.streaming.examples.wordcountasync.JobConfig.setStateBackend;
 
 /**
  * Benchmark mainly used for {@link ValueState} and only support 1 parallelism.
@@ -201,9 +201,7 @@ public class WordCount {
 		public TypeSerializerSnapshot<Object> snapshotConfiguration() {
 			return new CustomTypeSerializerSnapshot();
 		}
-
 	};
-
 
 	static CustomTypeSerializer INSTANCE = new CustomTypeSerializer();
 
@@ -230,13 +228,13 @@ public class WordCount {
 
 		@Override
 		public void flatMap(Tuple2<String, Long> in, Collector<Long> out) throws IOException {
-            wordCounter.value().then(currentValue -> {
+            wordCounter.value().thenAccept(currentValue -> {
                 if (currentValue != null) {
-                    wordCounter.update(currentValue + 1).then(empty -> {
+                    wordCounter.update(currentValue + 1).thenAccept(empty -> {
                         out.collect(currentValue + 1L);
                     });
                 } else {
-                    wordCounter.update(1).then(empty -> {
+                    wordCounter.update(1).thenAccept(empty -> {
                         out.collect(1L);
                     });
                 }
