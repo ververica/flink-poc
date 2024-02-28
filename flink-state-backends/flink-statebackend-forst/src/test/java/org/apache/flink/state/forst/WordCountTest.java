@@ -107,13 +107,13 @@ public class WordCountTest {
 
         @Override
         public void flatMap(String in, Collector<Long> out) throws IOException {
-            asyncWordCounter.value().then(currentValue -> {
+            asyncWordCounter.value().thenAccept(currentValue -> {
                 if (currentValue != null) {
-                    asyncWordCounter.update(currentValue + 1).then(empty -> {
+                    asyncWordCounter.update(currentValue + 1).thenAccept(empty -> {
                         out.collect(currentValue + 1L);
                     });
                 } else {
-                    asyncWordCounter.update(1).then(empty -> {
+                    asyncWordCounter.update(1).thenAccept(empty -> {
                         out.collect(1L);
                     });
                 }

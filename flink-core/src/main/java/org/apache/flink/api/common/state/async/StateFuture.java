@@ -20,6 +20,7 @@ package org.apache.flink.api.common.state.async;
 
 import org.apache.flink.annotation.PublicEvolving;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -30,21 +31,50 @@ import java.util.function.Function;
 public interface StateFuture<T> {
 
     /**
-     * Returns a new StateFuture that, when this future completes normally, is executed with
-     * this future's result as the argument to the supplied function.
+     * Returns a new StateFuture that, when this future completes
+     * normally, is executed with this future's result as the argument
+     * to the supplied function.
      *
-     * @param action the function to use to compute the value of the returned StateFuture
-     * @param <C> the function's return type
+     * @param fn the function to use to compute the value of
+     * the returned StateFuture
+     * @param <U> the function's return type
      * @return the new StateFuture
      */
-    <C> StateFuture<C> then(Function<? super T, ? extends C> action);
+    <U> StateFuture<U> thenApply(Function<? super T,? extends U> fn);
 
     /**
-     * Returns a new StateFuture that, when this future completes normally, is executed with this
-     * future's result as the argument to the supplied action.
+     * Returns a new StateFuture that, when this future completes
+     * normally, is executed with this future's result as the argument
+     * to the supplied action.
      *
-     * @param action the action to perform before completing the returned StateFuture.
+     * @param action the action to perform before completing the
+     * returned StateFuture
      * @return the new StateFuture
      */
-    StateFuture<Void> then(Consumer<? super T> action);
+    StateFuture<Void> thenAccept(Consumer<? super T> action);
+
+    /**
+     * Returns a new future that, when this future completes normally,
+     * is executed with this future as the argument to the supplied function.
+     *
+     * @param action the action to perform
+     * @return the new StateFuture
+     */
+    <U> StateFuture<U> thenCompose(
+            Function<? super T, ? extends StateFuture<U>> action);
+
+    /**
+     * Returns a new StateFuture that, when this and the other
+     * given future both complete normally, is executed with the two
+     * results as arguments to the supplied function.
+     *
+     * @param other the other StateFuture
+     * @param fn the function to use to compute the value of
+     * the returned StateFuture
+     * @param <U> the type of the other StateFuture's result
+     * @param <V> the function's return type
+     * @return the new StateFuture
+     */
+    <U,V> StateFuture<V> thenCombine(
+            StateFuture<? extends U> other, BiFunction<? super T,? super U,? extends V> fn);
 }

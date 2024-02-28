@@ -24,6 +24,7 @@ import org.apache.flink.runtime.state.heap.InternalKeyContext;
 import org.apache.flink.util.function.RunnableWithException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -59,7 +60,7 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
     }
 
     @Override
-    public <C> StateFuture<C> then(Function<? super V, ? extends C> action) {
+    public <C> StateFuture<C> thenApply(Function<? super V, ? extends C> action) {
         StateFutureImpl<R, K, C> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
             registerMailBoxCallBackFunc.accept(() -> {
@@ -73,7 +74,7 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
     }
 
     @Override
-    public StateFuture<Void> then(Consumer<? super V> action) {
+    public StateFuture<Void> thenAccept(Consumer<? super V> action) {
         StateFutureImpl<R, K, Void> stateFuture = new StateFutureImpl<>(currentKey, currentRecord, keyContext, registerMailBoxCallBackFunc);
         future.thenAccept(value -> {
             registerMailBoxCallBackFunc.accept(() -> {
@@ -84,6 +85,18 @@ public class StateFutureImpl<R, K, V> implements InternalStateFuture<V> {
             });
         });
         return stateFuture;
+    }
+
+    @Override
+    public <U> StateFuture<U> thenCompose(Function<? super V, ? extends StateFuture<U>> action) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public <U, S> StateFuture<S> thenCombine(
+            StateFuture<? extends U> other,
+            BiFunction<? super V, ? super U, ? extends S> fn) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
