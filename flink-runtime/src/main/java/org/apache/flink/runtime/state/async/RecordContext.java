@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.state.async;
 
 import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.runtime.epochmanager.AbstractEpochManager.Epoch;
 
 import java.util.function.Consumer;
 
@@ -28,13 +29,13 @@ public class RecordContext<K, R> extends ReferenceCounted {
 
     private final K key;
 
-    private long recordId;
+    private Epoch epoch;
 
     private boolean heldStateAccessToken;
 
     private final BatchingComponent<R, K> batchingComponentHandle;
 
-    private final Consumer<Long> recordCallback;
+    private final Consumer<Epoch> recordCallback;
 
     @VisibleForTesting
     public RecordContext(R record, K key, BatchingComponent<R, K> batchingComponent) {
@@ -46,18 +47,18 @@ public class RecordContext<K, R> extends ReferenceCounted {
         this.recordCallback = ignore -> {};
     }
 
-    public RecordContext(R record, K key, long recordId, BatchingComponent<R, K> batchingComponentHandle, Consumer<Long> recordCallback) {
+    public RecordContext(R record, K key, Epoch epoch, BatchingComponent<R, K> batchingComponentHandle, Consumer<Epoch> recordCallback) {
         super(0);
         this.record = record;
         this.key = key;
-        this.recordId = recordId;
+        this.epoch = epoch;
         this.heldStateAccessToken = false;
         this.batchingComponentHandle = batchingComponentHandle;
         this.recordCallback = recordCallback;
     }
 
     public static <KEY> RecordContext ofTimer(KEY key, BatchingComponent batchingComponent) {
-        return new RecordContext<>(null, key, -1L, batchingComponent, null);
+        return new RecordContext<>(null, key, Epoch.EMPTY, batchingComponent, null);
     }
 
     public R getRecord() {
@@ -76,7 +77,7 @@ public class RecordContext<K, R> extends ReferenceCounted {
     protected void referenceCountReachedZero() {
         if (batchingComponentHandle!= null) {
             batchingComponentHandle.releaseStateAccessToken(record, key);
-            recordCallback.accept(recordId);
+            recordCallback.accept(epoch);
         }
     }
 }

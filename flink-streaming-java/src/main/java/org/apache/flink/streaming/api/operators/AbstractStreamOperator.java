@@ -35,6 +35,7 @@ import org.apache.flink.core.memory.ManagedMemoryUseCase;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.metrics.groups.OperatorMetricGroup;
 import org.apache.flink.runtime.checkpoint.CheckpointOptions;
+import org.apache.flink.runtime.epochmanager.AbstractEpochManager;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.metrics.groups.InternalOperatorMetricGroup;
@@ -52,7 +53,6 @@ import org.apache.flink.streaming.api.operators.StreamOperatorStateHandler.Check
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-import org.apache.flink.streaming.runtime.tasks.EpochManager;
 import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
@@ -153,7 +153,7 @@ public abstract class AbstractStreamOperator<OUT>
     protected transient ProcessingTimeService processingTimeService;
 
     // ---------------- epoch manager -----------------
-    protected transient EpochManager epochManager;
+    protected transient AbstractEpochManager epochManager;
 
     // ------------------------------------------------------------------------
     //  Life Cycle
@@ -282,6 +282,7 @@ public abstract class AbstractStreamOperator<OUT>
         timeServiceManager = context.internalTimerServiceManager();
         stateHandler.initializeOperatorState(this);
         runtimeContext.setKeyedStateStore(stateHandler.getKeyedStateStore().orElse(null));
+        this.epochManager.setBatchingComponent(stateHandler.getBatchingComponent());
     }
 
     /**
@@ -524,9 +525,9 @@ public abstract class AbstractStreamOperator<OUT>
 
     public <E> RecordContext<?, E> preProcessElement(E element) {
         RecordContext<?, E> recordContext = new RecordContext<>(element, getCurrentKey(), epochManager.onRecord(),
-                stateHandler.getBatchingComponent(), recordId -> {
+                stateHandler.getBatchingComponent(), epoch -> {
             try {
-                epochManager.completeOneRecord(recordId);
+                epochManager.completeOneRecord(epoch);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

@@ -1017,6 +1017,14 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         return configuration.get(ExecutionOptions.BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM);
     }
 
+    public void setOutOfOderEpochManager(boolean enable) {
+        configuration.set(ExecutionOptions.EPOCH_MANAGER_OUT_OF_ORDER, enable);
+    }
+
+    public boolean getOutOfOderEpochManager() {
+        return configuration.get(ExecutionOptions.EPOCH_MANAGER_OUT_OF_ORDER);
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj instanceof ExecutionConfig) {
@@ -1242,6 +1250,8 @@ public class ExecutionConfig implements Serializable, Archiveable<ArchivedExecut
         configuration
                 .getOptional(ExecutionOptions.BATCHING_COMPONENT_MAX_IN_FLIGHT_RECORD_NUM)
                 .ifPresent(this::setBatchingComponentMaxInFlightRecordNum);
+        configuration.getOptional(ExecutionOptions.EPOCH_MANAGER_OUT_OF_ORDER)
+                .ifPresent(this::setOutOfOderEpochManager);
     }
 
     /**

@@ -152,7 +152,7 @@ public class BatchingComponent<R, K> {
         }
     }
 
-    public void drainAllInFlightDataBeforeStateSnapshot() throws InterruptedException {
+    public void drainAllInFlightData() throws InterruptedException {
         while (inFlightRecordNum.get() > 0) {
             if (!mailboxExecutor.tryYield()) {
                 fireOneBatch();

@@ -245,7 +245,7 @@ public class ForStKeyedStateBackend<R, K> extends RocksDBKeyedStateBackend<K> {
             @Nonnull final CheckpointStreamFactory streamFactory,
             @Nonnull CheckpointOptions checkpointOptions)
             throws Exception {
-        batchingComponent.drainAllInFlightDataBeforeStateSnapshot();
+        batchingComponent.drainAllInFlightData();
         return super.snapshot(checkpointId, timestamp, streamFactory, checkpointOptions);
     }
 

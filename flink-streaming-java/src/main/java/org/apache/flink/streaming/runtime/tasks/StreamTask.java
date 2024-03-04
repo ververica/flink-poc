@@ -42,6 +42,9 @@ import org.apache.flink.runtime.checkpoint.channel.ChannelStateWriter;
 import org.apache.flink.runtime.checkpoint.channel.InputChannelInfo;
 import org.apache.flink.runtime.checkpoint.channel.SequentialChannelStateReader;
 import org.apache.flink.runtime.checkpoint.filemerging.FileMergingSnapshotManager;
+import org.apache.flink.runtime.epochmanager.AbstractEpochManager;
+import org.apache.flink.runtime.epochmanager.OutOfOrderEpochManager;
+import org.apache.flink.runtime.epochmanager.StrictEpochManager;
 import org.apache.flink.runtime.execution.CancelTaskException;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.AvailabilityProvider;
@@ -315,7 +318,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
     @Nullable private final AvailabilityProvider changelogWriterAvailabilityProvider;
 
-    private final EpochManager epochManager;
+    private final AbstractEpochManager epochManager;
 
     // ------------------------------------------------------------------------
 
@@ -506,7 +509,8 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 
             this.bufferDebloatPeriod = taskManagerConf.get(BUFFER_DEBLOAT_PERIOD).toMillis();
             mailboxMetricsControl.setupLatencyMeasurement(systemTimerService, mainMailboxExecutor);
-            this.epochManager = new EpochManager();
+            boolean isOutOfOrderEpochManager = environment.getExecutionConfig().getOutOfOderEpochManager();
+            this.epochManager = isOutOfOrderEpochManager ? new OutOfOrderEpochManager() : new StrictEpochManager();
         } catch (Exception ex) {
             try {
                 resourceCloser.close();
@@ -1593,7 +1597,7 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
                         callback -> deferCallbackToMailbox(mailboxExecutor, callback));
     }
 
-    public EpochManager getEpochManager() {
+    public AbstractEpochManager getEpochManager() {
         return epochManager;
     }
 

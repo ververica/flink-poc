@@ -179,4 +179,12 @@ public class ExecutionOptions {
                     .intType()
                     .defaultValue(6000)
                     .withDescription("The max in-fight record num for state batching component.");
+
+    @Documentation.ExcludeFromDocumentation("This is an expert option, that we do not want to expose in the documentation")
+    public static final ConfigOption<Boolean> EPOCH_MANAGER_OUT_OF_ORDER =
+            ConfigOptions.key("execution.epoch-manager.out-of-order")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "The execution mode for epoch manager.");
 }

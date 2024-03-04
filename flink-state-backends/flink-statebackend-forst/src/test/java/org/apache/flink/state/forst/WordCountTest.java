@@ -1,5 +1,12 @@
 package org.apache.flink.state.forst;
 
+import org.apache.flink.api.common.eventtime.AscendingTimestampsWatermarks;
+import org.apache.flink.api.common.eventtime.BoundedOutOfOrdernessWatermarks;
+import org.apache.flink.api.common.eventtime.TimestampAssigner;
+import org.apache.flink.api.common.eventtime.TimestampAssignerSupplier;
+import org.apache.flink.api.common.eventtime.WatermarkGenerator;
+import org.apache.flink.api.common.eventtime.WatermarkGeneratorSupplier;
+import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.async.AsyncValueState;
 import org.apache.flink.api.common.state.async.AsyncValueStateDescriptor;
@@ -12,6 +19,7 @@ import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.contrib.streaming.state.RocksDBConfigurableOptions;
 import org.apache.flink.contrib.streaming.state.RocksDBOptions;
 import org.apache.flink.core.fs.FileSystem;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
@@ -21,9 +29,13 @@ import org.apache.flink.util.Collector;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.time.Duration;
+import java.util.Random;
 
 import static org.apache.flink.configuration.CheckpointingOptions.CHECKPOINTS_DIRECTORY;
 import static org.apache.flink.configuration.CheckpointingOptions.INCREMENTAL_CHECKPOINTS;
+import static org.apache.flink.configuration.ExecutionOptions.EPOCH_MANAGER_OUT_OF_ORDER;
 
 public class WordCountTest {
 
@@ -43,7 +55,7 @@ public class WordCountTest {
         config.set(TaskManagerOptions.MANAGED_MEMORY_SIZE, MemorySize.parse("128m"));
         config.set(RocksDBConfigurableOptions.TARGET_FILE_SIZE_BASE, MemorySize.parse("1m"));
         config.set(StateBackendOptions.STATE_BACKEND,
-                "org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory");
+                "org.apache.flink.state.forst.ForStStateBackendFactory");
         config.set(RocksDBOptions.LOCAL_DIRECTORIES, "/tmp/local-dir");
         return config;
     }
@@ -109,6 +121,46 @@ public class WordCountTest {
         DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
         mapper.print().setParallelism(1);
         env.execute();
+    }
+
+    @Test
+    public void WordCountInEventTime() throws Exception {
+        Configuration config = getCommonConfiguration();
+        config.set(ForStOptions.FOR_ST_WORKING_DIR, "file:///tmp/tmp-test-remote");
+        config.set(ForStOptions.FOR_ST_MODE, ForStOptions.ForStMode.LOCAL);
+        FileSystem.initialize(config, null);
+        config.set(CHECKPOINTS_DIRECTORY, "file:///tmp/checkpoint");
+        config.set(EPOCH_MANAGER_OUT_OF_ORDER, true);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(config);
+       // env.enableCheckpointing(500);
+        DataStream<String> source = WordSource.getSource(env, 1000, 10, 50).setParallelism(1)
+                .assignTimestampsAndWatermarks(IngestionTimeWatermarkStrategy.create()).setParallelism(1);
+        DataStream<Long> mapper = source.keyBy(e -> e).flatMap(new MixedFlatMapper()).setParallelism(1);
+        mapper.print().setParallelism(1);
+        env.execute();
+    }
+
+    private static class IngestionTimeWatermarkStrategy<T> implements WatermarkStrategy<T> {
+
+        private Random random = new Random();
+        private IngestionTimeWatermarkStrategy() {}
+
+        public static <T> IngestionTimeWatermarkStrategy<T> create() {
+            return new IngestionTimeWatermarkStrategy<>();
+        }
+
+        @Override
+        public WatermarkGenerator<T> createWatermarkGenerator(
+                WatermarkGeneratorSupplier.Context context) {
+            return new BoundedOutOfOrdernessWatermarks<>(Duration.ofMillis(100));
+        }
+
+        @Override
+        public TimestampAssigner<T> createTimestampAssigner(
+                TimestampAssignerSupplier.Context context) {
+            long delay = random.nextInt(10);
+            return (event, timestamp) -> System.currentTimeMillis() - delay;
+        }
     }
 
     public static class MixedFlatMapper extends RichFlatMapFunction<String, Long> {
