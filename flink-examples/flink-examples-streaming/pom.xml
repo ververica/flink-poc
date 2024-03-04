@@ -262,7 +262,7 @@ under the License.
 							</archive>
 
 							<includes>
-								<include>org/apache/flink/streaming/examples/wordcount2/*</include>
+								<include>org/apache/flink/streaming/examples/wordcountasync/*</include>
 								<include>META-INF/LICENSE</include>
 								<include>META-INF/NOTICE</include>
 							</includes>
