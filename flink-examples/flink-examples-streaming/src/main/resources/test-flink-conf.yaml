@@ -94,7 +94,7 @@ taskmanager.memory.process.size: 3072m
 taskmanager.numberOfTaskSlots: 1
 taskmanager.memory.managed.size: 512m
 #taskmanager.memory.managed.size: 128m
-#state.backend.remote-rocksdb.block-cache.size: 402653184
+#state.backend.forst.block-cache.size: 402653184
 
 # The parallelism used for programs that did not specify and other parallelism.
 
@@ -313,15 +313,15 @@ io.tmp.dirs: /mnt/disk1/tmp
 # Interval in milliseconds for refreshing the monitored directories.
 #historyserver.archive.fs.refresh-interval: 10000
 
-state.backend: org.apache.flink.state.remote.rocksdb.RemoteRocksDBStateBackendFactory
-#state.backend.remote-rocksdb.mode: LOCAL
-#state.backend.remote-rocksdb.working-dir: /mnt/disk1/tmp
-state.backend.remote-rocksdb.mode: REMOTE
-state.backend.remote-rocksdb.working-dir: "your hdfs path"
-state.backend.remote-rocksdb.io.parallelism: 32
-state.backend.remote-rocksdb.fs-cache.timeout: -1
-state.backend.remote-rocksdb.fs-cache.ttl: 100000000
-state.backend.remote-rocksdb.fs-cache.capacity: 1000000000
+state.backend: org.apache.flink.state.forst.ForStStateBackendFactory
+#state.backend.forst.mode: LOCAL
+#state.backend.forst.working-dir: /mnt/disk1/tmp
+state.backend.forst.mode: REMOTE
+state.backend.forst.working-dir: "your hdfs path"
+state.backend.forst.io.parallelism: 32
+state.backend.forst.fs-cache.timeout: -1
+state.backend.forst.fs-cache.ttl: 100000000
+state.backend.forst.fs-cache.capacity: 1000000000
 execution.batch-component.batch-size: 2000
 execution.batch-component.max-in-flight-record-num: 10000
 
