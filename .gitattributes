@@ -1,2 +1,0 @@
-forstjni-8.5.3-poc-SNAPSHOT.jar filter=lfs diff=lfs merge=lfs -text
-flink-state-backends/flink-statebackend-forst/forstjni-8.5.3-poc-SNAPSHOT.jar filter=lfs diff=lfs merge=lfs -text
